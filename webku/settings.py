@@ -127,6 +127,7 @@ LOGIN_URL = '/signup/'
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 LOGIN_REDIRECT_URL = 'home'  # Redirect to 'home' after login
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

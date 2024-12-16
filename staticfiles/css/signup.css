@@ -1,0 +1,204 @@
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'MADE Sunflower', sans-serif;
+    background-image: url("/static/images/bg2.png");
+    background-size: 100%; /* Mengatur agar gambar mengisi seluruh layar */
+    background-position: center; /* Posisi gambar di tengah */
+    background-repeat: no-repeat; /* Mencegah pengulangan gambar */
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+.main{
+	width: 450px;
+	height: 500px;
+	background: #c8d9e6;
+	overflow: hidden;
+	border-radius: 10px;
+	box-shadow: 5px 20px 50px #000;
+}
+#chk{
+	display: none;
+}
+.main {
+    min-height: 600px; /* Sesuaikan dengan tinggi konten */
+}
+.signup, .login {
+    height: auto;
+    min-height: 600px; /* Atau sesuai kebutuhan */
+}
+
+.signup{
+	position: relative;
+	width:100%;
+}
+.signup input::placeholder{
+	color: #c0c0c0;
+}
+label{
+	color: #2F4156;
+	font-size: 2.3em;
+	justify-content: center;
+	display: flex;
+	margin: 50px;
+	font-weight: bold;
+	cursor: pointer;
+	transition: .5s ease-in-out;
+}
+input{
+	width: 60%;
+	height: 10px;
+	justify-content: center;
+	display: flex;
+	margin: 18px auto;
+	padding: 12px;
+    border: rgba(245, 239, 235, 0.35);
+	outline: none;
+	border-radius: 5px;
+	background-color: rgba(245, 239, 235, 0.35);
+	font-family: 'MADE Sunflower', sans-serif;
+}
+button{
+	width: 60%;
+	height: 40px;
+	margin: 10px auto;
+	justify-content: center;
+	display: block;
+	color: #ffff;
+	background: #567C8D;
+	font-size: 1em;
+	font-weight: bold;
+	margin-top: 30px;
+	outline: none;
+	border: none;
+	border-radius: 5px;
+	transition: .2s ease-in;
+	cursor: pointer;
+	font-family: 'MADE Sunflower', sans-serif;
+}
+button:hover{
+	background: #ed7863
+}
+
+.form-row {
+    display: flex;
+	height: 30px;
+    align-items: center; /* Menyelaraskan elemen secara vertikal */
+    justify-content: flex-start; /* Menyelaraskan elemen ke kiri */
+    gap: 5px; /* Memberikan jarak antar elemen */
+}
+
+.form-row label {
+	color: #c0c0c0;
+	margin: 0;
+	margin-left: 50px;
+    width: 40%;
+	left: 0%;
+	font-size: 20px;
+}
+
+.form-row select {
+    width: 30%; /* Lebar dropdown select */
+    padding: 10px;
+    border-radius: 5px;
+    border: 2px solid rgb(103, 60, 0);
+	background: transparent;
+}
+
+.login{
+	background: #f5efeb;
+	border-radius: 60% / 10%;
+	transform: translateY(-180px);
+	transition: .8s ease-in-out;
+}
+
+.login a{
+	color: #000000;
+	text-decoration: none;
+	margin-left: 90px;
+}
+
+.back-link {
+    color: #000000;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    margin-left: 90px;
+}
+
+.back-link i {
+    margin-right: 8px; /* Spasi antara ikon dan teks */
+}
+
+.login label{
+	color: #2F4156;
+	transform: scale(.6);
+	position: relative;
+	top: 20px;
+}
+
+#chk:checked ~ .login{
+	transform: translateY(-500px);
+}
+#chk:checked ~ .login label{
+	transform: scale(1);	
+}
+
+.image-container {
+    text-align: center; /* Gambar di tengah layar */
+    margin-bottom: 20px; /* Spasi antara gambar dan form login */
+}
+
+/* Styling gambar */
+.standalone-logo {
+    width: 120px; /* Atur ukuran gambar */
+    height: auto; /* Jaga proporsi gambar */
+    border-radius: 10px; /* Opsional, untuk memberi efek sudut tumpul */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Bayangan untuk gambar */
+}
+
+.login input {
+	background-color: #c8d9e6;
+}
+
+.login input::placeholder {
+	color: #2F4156;
+	font-family: 'MADE Sunflower', sans-serif;
+}
+
+.signup input::placeholder {
+	color: #2F4156;
+	font-family: 'MADE Sunflower', sans-serif;
+}
+
+.message-popup {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 9999;
+    display: none; /* Sembunyikan dulu */
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

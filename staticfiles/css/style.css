@@ -1,0 +1,795 @@
+/*=============halaman==============*/
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    text-decoration: none;
+}
+/*==============body================*/
+body {
+    color: #F1F1F0;
+    margin: auto;
+    font-family: 'Kavoon';
+    overflow: auto;
+    background-color: #f9f0df;
+    animation: gradient 15s ease infinite;
+    background-size: 400% 400%;
+    background-attachment: fixed;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+/*================background===============*/
+
+@keyframes gradient {
+    0% {
+        background-position: 0% 0%;
+    }
+    50% {
+        background-position: 100% 100%;
+    }
+    100% {
+        background-position: 0% 0%;
+    }
+}
+
+
+
+/*==============judul dan deskripsi================*/
+.text-container {
+    position: relative;
+    display: inline-block;
+}
+
+.baground {
+    background: linear-gradient(to bottom, #f8f8ff, #ffffff); /* Gradien warna */
+    background-position: right bottom;
+    height: 730px;
+    width: 750px;
+    position: absolute;
+    top: 0;
+    left: 1px;
+    z-index: -1; /* Supaya di belakang konten */
+}
+
+.text-the {
+    font-size: 50px;
+    color: #c85c42;
+    position: relative;
+    align-items: center;
+    top: 200px; /* Posisi teks "The" lebih tinggi */
+    left: 135px;    /* Teks berada di sisi kiri */
+}
+
+.text-sweeter {
+    font-size: 50px;
+    font-weight: bold;
+    color: #c85c42;
+    position: relative;
+    top: 250px;
+    margin-left: 40px; /* Beri jarak horizontal untuk menyesuaikan tata letak */
+    font-family: 'Kavoon';
+}
+
+.kuekue {
+    display: flex; /* Menggunakan Flexbox */
+    justify-content: center; /* Pusatkan secara horizontal */
+    align-items: center; /* Pusatkan secara vertikal (jika diperlukan) */
+}
+
+.round-planet {
+    width: 480px;
+    height: 480px;
+    border-radius: 50%; /* Membuat lingkaran */
+    position: relative;
+    z-index: 0;
+    border: 3px solid #f9f9ff; /* Garis border putih lembut */
+    display: flex;
+    justify-content: center;
+    align-items: center; /* Posisi elemen anak di tengah */
+    position: relative;
+    left: 505px;
+    top: 20px;
+}
+.round-planet img {
+    z-index: 10;
+    width: 550px;
+    transform: translate(10px, -20px);
+    position: absolute;
+}
+
+/* Lingkaran dalam */
+.inner-circle {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid #ffffff; /* Warna border putih */
+}
+
+/* Ukuran dan posisi setiap lingkaran */
+.circle-1 {
+    width: 360px;
+    height: 360px;
+    z-index: -1;
+}
+
+.circle-2 {
+    width: 240px;
+    height: 240px;
+}
+
+.circle-3 {
+    width: 120px;
+    height: 120px;
+}
+
+/*================ICON==========================*/
+
+.header-icon {
+    text-align: right;
+    margin: 20px;
+
+}
+
+
+/*======================NAVBAR=========================*/
+
+.navbar {
+    position: -webkit-sticky; /* Untuk browser lama */
+    position: sticky;
+    top: 0; /* Tetap berada di bagian atas */
+    z-index: 1000;
+    background-color: #f9f0df;
+    transition: box-shadow 0.3s ease; /* Efek transisi untuk box-shadow */
+    box-shadow: none; /* Awalnya tidak ada box-shadow */
+}
+.navbar .container {
+    position: sticky;
+    background: transparent;
+    display: flex;
+    justify-content: space-between; /* Membuat logo, menu, dan ikon cart berjarak */
+    align-items: center; /* Menjaga semua elemen sejajar secara vertikal */
+    padding: 10px 10px; /* Tambahkan padding sesuai kebutuhan */
+    height: 70px;
+}
+.navbar.scrolled {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Tambahkan bayangan saat scroll */
+}
+
+
+.nav-links{
+    list-style: none;
+    display: flex;
+    padding-right: 1px;
+}
+
+.nav-links li{
+    margin-left: 20px;
+    position: relative;
+    left: 10px;
+}
+
+.nav-links a{
+    color: #344660;
+    font-size: 30px;
+    font-family: 'Karma';
+}
+
+.nav-links input[type="text"] {
+    background: rgba(113, 47, 0, 0.212);
+    color: #000000;
+    padding: 1px 10px 1px 30px; /* Tambahkan padding kiri untuk ruang ikon */
+    border: 2px solid transparent;
+    border-radius: 10px;
+    outline: none;
+    margin-top: 8px;
+    position: relative;
+    margin-left: 40px;
+    font-size: 17px;
+    width: 200px; /* Atur lebar input sesuai keinginan */
+    font-family: 'Karma';
+}
+
+.container .fa-search {
+    font-size: 20px;
+    color: #000;
+    margin-right: 9px;
+    position: relative;
+    left: 78px;
+    top: 14px;
+}
+
+.nav-links input[type="text"]::placeholder {
+    text-align: left;
+    opacity: 1;
+}
+
+.menu-toggle {
+    flex-direction: column; /* Mengatur bar menjadi kolom */
+}
+
+.bar {
+    height: 3px; /* Tinggi bar */
+    width: 25px; /* Lebar bar */
+    background-color: rgb(0, 0, 0); /* Warna bar */
+    margin: 3px 0; /* Jarak antara bar */
+}
+
+.makanan-container{
+    display: flex;
+    justify-content:center;
+    flex-wrap: wrap;
+}
+
+.section-baru {
+    text-align: center;
+    font-size: 50px;
+    position: relative;
+    top: 140px;
+    padding-top: 170px;
+    background: #C85C42;
+    height: 730px;
+}
+
+/*=====================cart============================*/
+
+.cart-sidebar {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 300px;
+    height: 100%;
+    background-color: #F9F0DF;
+    color: #fff;
+    transition: right 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    font-family: 'MADE Sunflower', sans-serif;
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.3);
+}
+
+.cart-sidebar h2 {
+    padding: 20px;
+    background-color: #344660;
+    margin: 0;
+}
+
+.cart-items {
+    display: flex;
+    flex-grow: 1;
+    padding: 20px;
+    gap: 10px;
+    flex-direction: column;
+}
+
+.cart-footer {
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.close-btn, .checkout-btn {
+    background-color: #344660;
+    color: #ffff;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    border-radius: 10px;
+    font-family: 'MADE Sunflower', sans-serif;
+}
+
+
+#cart-icon {
+    cursor: pointer;
+    margin-left: 20px;
+}
+
+.quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: auto;
+}
+
+.quantity-btn {
+    background-color: #344660;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    color: #F9F0DF;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+ /***********************************************/
+
+@media screen and (max-width: 768px) {
+    .bar {
+        height: 3px; /* Tinggi bar */
+        width: 30px; /* Lebar bar */
+        background-color: rgb(103, 60, 0); /* Ubah warna di sini */
+        margin: 2px; /* Jarak antara bar */
+    }
+    .menu-toggle {
+        display: flex; /* Pastikan menu toggle ditampilkan */
+        cursor: pointer; /* Menambahkan kursor pointer untuk indikasi bahwa ini bisa diklik */
+        flex-direction: column; /* Agar terlihat seperti garis tiga */
+    }
+    .nav-links {
+        display: none; /* Menyembunyikan nav links secara default */
+        width: 300px;
+        position: absolute; /* Menjadikan box muncul di bawah toggle */
+        top: 260px; /* Atur jarak dari atas */
+        left: 0;
+        right: 0; /* Agar box melebar sesuai lebar navbar */
+        background-color: #F9F0DF; /* Warna background */
+        border: 1px solid rgb(140, 75, 0); /* Border untuk box */
+        border-radius: 5px; /* Menghaluskan sudut */
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Bayangan untuk efek 3D */
+        z-index: 10; /* Pastikan box di atas elemen lain */
+    }
+    .nav-links.active {
+        display: list-item; /* Menampilkan link ketika menu toggle aktif */
+    }
+    .nav-links input[type="text"]{
+        left: 0;
+    }
+    
+
+    .makanan3{
+        flex-wrap: wrap;
+    }
+}
+
+.makanan {
+    text-align: center;
+    background-size: 20px;
+    background-color: rgba(255, 255, 255, 0.58);
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin: 20px;
+    max-width: 300px;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    top: -350px;
+    color: #000;
+}
+
+.makanan img {
+    width: 100%; /* Atur lebar gambar menjadi 100% dari elemen induknya */
+    height: auto; /* Mempertahankan rasio aspek gambar */
+    max-width: 200px; /* Atur lebar maksimum jika diperlukan */
+    border-radius: 10px; /* Tambahkan sudut melengkung pada gambar jika diinginkan */
+}
+
+
+.makanan:hover {
+    background-color: #EDE0D0; /* Warna latar saat di-hover */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* Menambahkan bayangan lebih besar */
+}
+
+.btn-add-to-card {
+    background-color: #0BB0C8;
+    border: none;
+    color: #000;
+    font-size: 12px;
+    font-family: 'MADE Sunflower', sans-serif;
+    padding: 10px 30px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.btn-add-to-card:hover {
+    background-color: #c0c0c0;
+}
+
+
+.btn-add-to-card:hover {
+    background-color: #c0c0c0;
+}
+
+/*=================section2===============*/
+.section2-kedua {
+    text-align: center;
+    padding-bottom: 200px; /* Mengurangi jarak bawah */
+    font-size: 50px;
+    position: relative;
+    top: -250px;
+    padding-top: 95px;
+    background-color: #C85C42;
+    height: 752px
+     
+}
+
+/*=================category makanan2===============*/
+
+.makanan2-category{
+    display: flex;
+    justify-content:center;
+    flex-wrap: wrap;
+}
+
+.makanan2 {
+    position: relative;
+    text-align: center;
+    background-size: 20px;
+    background-color: rgba(255, 255, 255, 0.58);
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin: 20px;
+    max-width: 300px;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    top: -800px;
+    color: #000;
+}
+
+.makanan2 img {
+    width: 100%; /* Atur lebar gambar menjadi 100% dari elemen induknya */
+    height: 180px; /* Mempertahankan rasio aspek gambar */
+    max-width: 200px; /* Atur lebar maksimum jika diperlukan */
+    border-radius: 10px; /* Tambahkan sudut melengkung pada gambar jika diinginkan */
+    transition: transform 250ms ease;
+}
+
+
+.makanan2:hover {
+    background-color: #EDE0D0; /* Warna latar saat di-hover */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* Menambahkan bayangan lebih besar */
+}
+
+
+.btn-add-to-card:hover {
+    background-color: #c0c0c0;
+}
+
+
+.btn-add-to-card:hover {
+    background-color: #c0c0c0;
+}
+
+/*=================Tombol===============*/
+#category-buttons button.active {
+    background-color: #000000;
+    color: white;
+}
+
+/****************Tombol category**********/
+#category-buttons {
+    display: flex; 
+    justify-content: center; 
+    gap: 80px; 
+    margin-top: -20px;
+    margin-bottom: 50px;
+
+}
+
+#category-buttons button {
+    background: none;
+    border: none;
+    color: #000;
+    font-size: 20px;
+    font-family: 'MADE Sunflower', sans-serif;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: none;
+    transition: color 0.3s ease;
+    position: relative;
+    top: -770px;
+}
+
+/* Gaya saat mouse diarahkan ke tombol */
+#category-buttons button:hover {
+    color: #F9F0DF; /* Warna berubah saat diarahkan */
+}
+
+.section-baru h4 {
+    font-size: 70px;
+    color: #F9F0DF;
+    margin-bottom: 30px;
+    font-weight: bold;
+    position: relative;
+    top: -90px;
+    font-family: 'Karma';
+}
+
+.section-baru p {
+    font-size: 25px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-bottom: 30px;
+    font-weight: bold;
+    position: relative;
+    top: -140px;
+    font-family: Kavoon;
+}
+
+.section-baru h5 {
+    font-size: 25px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-bottom: 30px;
+    font-weight: bold;
+    position: relative;
+    top: 270px;
+    font-family: Kavoon;
+}
+
+.section-baru h3 {
+    font-size: 22px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-bottom: 30px;
+    font-weight: bold;
+    position: relative;
+    top: 270px;
+    font-family: 'Kavoon';
+}
+
+.section2-kedua h3 {
+    font-size: 80px;
+    color: #F9F0DF;
+    margin-bottom: 30px;
+    font-weight: bold;
+    font-family: 'Karma';
+}
+
+/**************** Section 3 ***********************/
+.section3-ketiga {
+    text-align: center;
+    padding-bottom: 30px;
+    font-size: 50px;
+    position: relative;
+    top: -630px;
+    padding-top: 100px;
+    height: 100px;
+}
+
+.section3-ketiga h3 {
+    font-size: 50px;
+    color: #000000;
+    margin-bottom: 30px;
+    font-weight: bold;
+}
+
+.section {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 180px;
+    margin: 40px 0;
+    position: relative;
+    top: -580px;
+}
+
+.about {
+    width: 70%;
+    text-align: justify;
+    line-height: 1.5;
+    color: #000;
+    font-family: 'MADE Sunflower', sans-serif;
+    position: relative;
+    left: 50px;
+}
+
+.about h2 {
+    font-size: 36px;
+    color: #FF6347;
+    margin-bottom: 5px;
+    font-family: 'Georgia', serif;
+}
+
+.about p {
+    font-size: 20px; /* Ukuran teks isi */
+    color: #555; /* Warna teks isi */
+}
+
+.pages {
+    width: 30%;
+    text-align: left;
+    line-height: 2.5;
+    position: relative;
+    left: 60px;
+}
+
+.pages h2 {
+    font-size: 24px;
+    color: #c85c42;
+    font-family: 'Georgia', serif;
+    margin-bottom: 15px; /* Memberi jarak antara judul dan daftar */
+}
+
+.pages ul {
+    list-style: none;
+    padding: 0;
+}
+
+.pages ul li {
+    margin: 10px 0;
+}
+
+.pages ul li a {
+    text-decoration: none;
+    color: #2e3a59;
+    font-size: 20px;
+    transition: color 0.3s;
+}
+
+.pages ul li a:hover {
+    color: #c85c42;
+    text-decoration: underline;
+}
+
+.contact {
+    width: 70%;
+    text-align: left;
+    position: relative;
+    top: 20px;
+}
+
+.contact h2 {
+    font-size: 24px;
+    color: #c85c42;
+    font-family: 'Georgia', serif;
+    margin-bottom: 15px;
+}
+
+.contact p {
+    font-size: 20px;
+    color: #2e3a59;
+    line-height: 1.5;
+}
+
+.contact i {
+    margin-right: 10px; /* Memberikan jarak di sebelah kanan ikon */
+}
+
+.owners {
+    margin-bottom: 100px;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    position: relative;
+    top: 0px;
+}
+
+.owners h2 {
+    font-family: 'Georgia', serif;
+    font-size: 24px;
+    color: #b3542e;
+}
+
+/*************** CSS *********************/
+/* Untuk nama makanan */
+.makanan-name {
+    font-size: 24px; /* Ukuran font besar agar menonjol */
+    font-weight: bold; /* Membuat teks lebih tebal */
+    color: #333; /* Warna teks gelap untuk kontras */
+    margin-bottom: 5px; /* Jarak bawah dengan elemen berikutnya */
+    font-family: 'Arial', sans-serif; /* Font modern */
+}
+
+/* Untuk harga makanan */
+.makanan-price {
+    font-size: 18px;
+    font-weight: normal;
+    color: #777;
+    margin: 0;
+    font-family: 'Arial', sans-serif;
+    position: relative;
+    left: -50px;
+}
+
+.profile-container {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.profile {
+    background-color: #f5f5f5;
+    border-radius: 10px;
+    padding: 10px;
+    width: 150px;
+    text-align: center;
+}
+.profile img {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+}
+.profile .name {
+    font-weight: bold;
+    margin-top: 10px;
+}
+.profile .id {
+    color: #666;
+}
+
+
+.header-icon {
+    text-align: right;
+    margin: 20px;
+
+}
+
+#toggle-bar {
+    background-color: #F9F0DF;
+    padding: 10px;
+    border: 4px solid #344660;
+    border-radius: 15px;
+    position: absolute;
+    line-height: 1.9;
+}
+
+#toggle-bar a {
+    display: none;
+    display: flex;
+    flex-direction: column;
+    width: 100px;
+    align-items: flex-start;
+    font-size: 20px;
+}
+
+/* Initial style for the pop-up */
+.popup {
+    display: block;  /* Keep the pop-up in the document flow, we will use visibility and opacity */
+    visibility: hidden;  /* Initially hide the pop-up */
+    opacity: 0;  /* Initially hide the pop-up */
+    position: fixed;
+    left: 50%;
+    top: -200px;  /* Start above the screen */
+    transform: translateX(-50%);  /* Center horizontally */
+    background: #fff;
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 15px;
+    width: 300px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+    z-index: 9999;
+    transition: top 0.4s ease-in-out, opacity 0.4s ease, visibility 0s linear 0.4s; /* Smooth transition for sliding down */
+    font-family: 'Karma';
+}
+
+/* Pop-up content */
+.popup-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.popup-header {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.popup-message {
+    margin: 10px 0;
+}
+
+.popup-ok-btn {
+    padding: 8px 15px;
+    background-color: #f44336;  /* Red color */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.popup-ok-btn:hover {
+    background-color: #d32f2f;  /* Darker red on hover */
+}
+
+/* When pop-up is shown */
+.popup.show {
+    visibility: visible;  /* Make pop-up visible */
+    opacity: 1;  /* Make pop-up fully opaque */
+    top: 20px;  /* Pop-up moves down to this position */
+    transition: top 0.4s ease-in-out, opacity 0.4s ease, visibility 0s linear 0s;  /* Transition both top and opacity */
+}
+

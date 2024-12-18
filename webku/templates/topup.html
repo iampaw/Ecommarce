@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top-up Balance</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/topup.css' %}">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link href='https://fonts.googleapis.com/css?family=Kavoon' rel='stylesheet'>
+    <link href='https://fonts.googleapis.com/css?family=Karma' rel='stylesheet'>
+</head>
+<body>
+    <div class="container">
+        <h1>Top-Up Balance</h1>
+
+        {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="client_id">Select User</label>
+                <select name="client_id" id="client_id" required>
+                    <option value="">-- Select User --</option>
+                    {% for user in users %}
+                        <option value="{{ user.id }}">{{ user.username }} (Current Balance: {{ user.profile.balance }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+        
+            <div class="form-group">
+                <label for="nominal">Amount (in IDR)</label>
+                <input type="number" name="nominal" id="nominal" min="1" placeholder="Enter amount" required>
+            </div>
+        
+            <div class="form-actions">
+                <button type="submit"><i class="fas fa-wallet"></i> Top-Up</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

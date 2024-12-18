@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
-from .models import Makanan, makanan2, LoginHistory, Profile, Address
+from .models import Makanan, Makanan2, LoginHistory, Profile, Address
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.models import User
 from django.utils.timezone import now
@@ -10,13 +10,14 @@ import logging
 from django.contrib.auth.decorators import login_required
 from .forms import ProfileForm, UserUpdateForm
 from .forms import AddressForm
+from .models import Client 
 
 logger = logging.getLogger(__name__)
 
 def profile(request):
     return render(request, 'profile.html')
 
-def home(request):
+def home_page(request):
     return render(request, 'home.html', {
         'user_authenticated': request.user.is_authenticated
     })  # Pastikan Anda memiliki template 'home.html'
@@ -125,7 +126,7 @@ def logout_view(request):
 
 def home_page(request):
     makanan_list = Makanan.objects.all()  # Ambil semua data makanan dari database
-    makanan2_list = makanan2.objects.all() 
+    makanan2_list = Makanan2.objects.all() 
     context = {
         'makanan_list': makanan_list,
         'makanan2_list': makanan2_list,
@@ -135,24 +136,38 @@ def home_page(request):
 
 @login_required
 def profile_view(request):
-    profile = Profile.objects.get(user=request.user)  # Ambil data profile yang terkait dengan user yang sedang login
+    # Mengecek apakah profil sudah ada atau membuatnya jika belum ada
+    try:
+        profile = request.user.profile
+    except Profile.DoesNotExist:
+        profile = Profile.objects.create(user=request.user)
+
+    # Menangani request POST untuk mengupdate profil
     if request.method == 'POST':
         phone_number = request.POST.get('phone_number')
         gender = request.POST.get('gender')
         birth_date = request.POST.get('birth_date')
-        
-        # Update data profile
+
+        # Mengupdate data profil
         profile.phone_number = phone_number
         profile.gender = gender
         profile.birth_date = birth_date
         profile.save()
-        
-        return redirect('profile')  # Redirect ke halaman profile setelah update
 
+        # Redirect ke halaman profil setelah data disimpan
+        return redirect('profile')
+
+    # Menampilkan halaman profil
     return render(request, 'profile.html', {'profile': profile})
 
 @login_required
 def address_view(request):
+    try:
+        # Mengambil alamat pengguna yang sudah ada
+        address = Address.objects.get(user=request.user)
+    except Address.DoesNotExist:
+        address = None
+
     if request.method == 'POST':
         # Mengambil data dari request.POST
         full_name = request.POST.get('full_name')
@@ -162,26 +177,38 @@ def address_view(request):
         postal_code = request.POST.get('postal_code')
         housing_address = request.POST.get('housing_address')
 
-        # Validasi data (bisa disesuaikan dengan kebutuhan)
+        # Validasi data
         if full_name and phone and province and city and postal_code and housing_address:
-            # Menyimpan data ke database
-            address = Address(
-                user=request.user,  # Pastikan menyimpan data dengan user yang sedang login
-                full_name=full_name,
-                phone=phone,
-                province=province,
-                city=city,
-                postal_code=postal_code,
-                housing_address=housing_address
-            )
-            address.save()
-            return redirect('address')  # Setelah berhasil simpan, redirect ke halaman yang sama
+            # Jika alamat sudah ada, update; jika tidak, buat baru
+            if address:
+                address.full_name = full_name
+                address.phone = phone
+                address.province = province
+                address.city = city
+                address.postal_code = postal_code
+                address.housing_address = housing_address
+                address.save()
+            else:
+                # Menyimpan data ke database jika belum ada
+                address = Address(
+                    user=request.user,
+                    full_name=full_name,
+                    phone=phone,
+                    province=province,
+                    city=city,
+                    postal_code=postal_code,
+                    housing_address=housing_address
+                )
+                address.save()
+
+            return redirect('address')  # Redirect ke halaman yang sama setelah simpan
         else:
-            # Jika ada data yang kosong, bisa menambahkan pesan error atau penanganan lainnya
             error_message = 'Please fill out all fields.'
-            return render(request, 'address.html', {'error_message': error_message})
+            return render(request, 'address.html', {'error_message': error_message, 'address': address})
+
     else:
-        return render(request, 'address.html')
+        # Jika bukan POST, tampilkan form dengan data alamat yang ada (jika ada)
+        return render(request, 'address.html', {'address': address})
     
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -190,3 +217,24 @@ def get_client_ip(request):
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip
+
+def top_up_balance(request):
+    if request.method == 'POST':
+        client_id = request.POST.get('client_id')
+        nominal = request.POST.get('nominal')
+
+        try:
+            user = User.objects.get(id=client_id)  # Mendapatkan user berdasarkan ID
+            user.profile.balance += int(nominal)  # Menambahkan saldo
+            user.profile.save()  # Menyimpan perubahan saldo
+            messages.success(request, f"Saldo untuk {user.username} berhasil di-top up sebesar {nominal} IDR.")
+        except User.DoesNotExist:
+            messages.error(request, "User tidak ditemukan.")
+        except ValueError:
+            messages.error(request, "Nominal tidak valid.")
+        
+        return redirect('top_up_balance')  # Redirect kembali ke halaman top-up
+
+    # Mengambil semua user yang ada
+    users = User.objects.all()
+    return render(request, 'topup.html', {'users': users})

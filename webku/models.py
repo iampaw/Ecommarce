@@ -5,22 +5,24 @@ from django.contrib.auth.models import User
 from django.contrib import admin
 from django.utils.timezone import now
 
+
 class Makanan(models.Model):
     nama_menu = models.CharField(max_length=100)
     harga = models.DecimalField(max_digits=10, decimal_places=2)
-    gambar = models.ImageField(upload_to='webku/static')
+    gambar = models.ImageField(upload_to='makanan_images/')
 
     def __str__(self):
         return self.nama_menu
 
-class makanan2(models.Model):
+class Makanan2(models.Model):
     nama_category = models.CharField(max_length=100)
     harga = models.DecimalField(max_digits=10, decimal_places=2)
-    gambar = models.ImageField(upload_to='webku/static')
+    gambar = models.ImageField(upload_to='category_makanan/')
     category = models.CharField(max_length=50, default='', choices=[
         ('Ice Cream', 'Ice Cream'),
         ('Maccarone', 'Maccarone'),
         ('Cookies', 'Cookies'),
+        ('Short Cake', 'Short Cake'),
     
 
     ])
@@ -62,9 +64,10 @@ class Profile(models.Model):
     phone_number = models.CharField(max_length=15)
     gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')])
     birth_date = models.DateField()
+    balance = models.DecimalField(default=0, max_digits=10, decimal_places=2)
 
     def __str__(self):
-        return self.user.username
+        return f"{self.user.username}'s Profile"
     
 class Address(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -77,3 +80,10 @@ class Address(models.Model):
 
     def __str__(self):
         return self.full_name
+    
+class Client(models.Model):
+    username = models.CharField(max_length=100)
+    email = models.EmailField()
+
+    def __str__(self):
+        return self.username

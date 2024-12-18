@@ -14,6 +14,7 @@ urlpatterns = [
     path('checkout/', views.checkout, name='checkout'),
     path('profile/', views.profile, name='profile'),
     path('profile/address/', views.address_view, name='address'),
+    path('profile/topup/', views.top_up_balance, name='top_up_balance'),
     
     
 

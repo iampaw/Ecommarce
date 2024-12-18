@@ -219,6 +219,10 @@ def get_client_ip(request):
     return ip
 
 def top_up_balance(request):
+    if not request.user.is_superuser:
+        messages.error(request, "Anda tidak memiliki izin untuk mengakses halaman ini.")
+        return redirect('profile')  # Atau halaman lain yang sesuai
+    
     if request.method == 'POST':
         client_id = request.POST.get('client_id')
         nominal = request.POST.get('nominal')

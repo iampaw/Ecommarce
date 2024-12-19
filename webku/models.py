@@ -61,9 +61,9 @@ class LoginHistory(models.Model):
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    phone_number = models.CharField(max_length=15)
-    gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')])
-    birth_date = models.DateField()
+    phone_number = models.CharField(max_length=15, default='+62 000000000')
+    gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')], default='Male')
+    birth_date = models.DateField(default=now)
     balance = models.DecimalField(default=0, max_digits=10, decimal_places=2)
 
     def __str__(self):

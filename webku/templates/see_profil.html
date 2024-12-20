@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile</title>
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script>
+        function showPopup() {
+            alert("Profil untuk pengguna ini sudah ada.");
+        }
+    
+        // Fungsi untuk memeriksa apakah profil sudah ada
+        function checkProfileExists(username) {
+            $.ajax({
+                url: '/profile/' + username + '/',  // URL untuk memeriksa profil
+                type: 'GET',
+                success: function(data) {
+                    // Jika profil sudah ada, tampilkan pop-up
+                    if (data.profile_exists) {
+                        showPopup();
+                    }
+                },
+                error: function() {
+                    alert("Terjadi kesalahan saat memeriksa profil.");
+                }
+            });
+        }
+    
+        // Panggil fungsi pengecekan profil ketika halaman selesai dimuat
+        $(document).ready(function() {
+            var username = "{{ user.username }}";  // Ambil username pengguna dari context
+            checkProfileExists(username);  // Panggil pengecekan profil
+        });
+    </script>
+    
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="profile-info">
+                <img id="profile-pic" src="https://placehold.co/50x50" alt="User profile picture" width="50" height="50" onclick="changeProfilePic()">
+        
+                <!-- Input file tersembunyi untuk mengganti gambar -->
+         <input type="file" id="file-input" style="display:none;" onchange="updateProfilePic(event)">
+                <h2>{{ user.username }}</h2>
+                <script>
+                    // Fungsi untuk membuka dialog pemilihan gambar saat gambar profil diklik
+                    function changeProfilePic() {
+                        document.getElementById('file-input').click();
+                    }
+            
+                    // Fungsi untuk memperbarui gambar profil dengan gambar yang dipilih
+                    function updateProfilePic(event) {
+                        const file = event.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                document.getElementById('profile-pic').src = e.target.result;
+                            }
+                            reader.readAsDataURL(file);
+                        }
+                    }
+                </script>
+            </div>
+            <ul>
+                <li><a href="#" onclick="showSection('account')"><i class="fas fa-user"></i> MyAccount</a></li>
+                <li><a href="{% url 'profile' %}"><i class="fas fa-user-edit"></i> Profile</a></li>
+                <li><a href="/address/"><i class="fas fa-map-marker-alt"></i> Address</a></li>
+                <li><a href="/"><i class="fas fa-back-to-home"></i> Back To Home</a></li>
+            </ul>
+        </div>
+        <div class="content">
+            <h1>My Profil</h1>
+            <p>Manage and protect your account</p>
+            <hr>
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="profile-container">
+                    <div class="profile-section">
+                        <label>Username</label>
+                        <span>{{ user.username }}</span>
+                    </div>
+                    
+                    <div class="profile-section">
+                        <label>Email</label>
+                        <span>{{ user.email }}</span>
+                        <a href="#">Change</a>
+                    </div>
+
+                    <div class="profile-section">
+                        {% if user.profile %}
+                        <label>Saldo</label>
+                        <label>{{ user.profile.balance }}</label>
+                        {% else %}
+                            <p>Profile belum dibuat untuk pengguna ini.</p>
+                        {% endif %}
+                        <a href="{% url 'request_top_up' %}">Request Top Up</a> <!-- Link untuk mengajukan permintaan top-up -->
+                    </div>
+                    
+                    <div class="profile-section">
+                        <label>Phone Number</label>
+                        {% if user.profile %}
+                            <span>{{ user.profile.phone_number }}</span>
+                        {% else %}
+                            <p>Profile belum dibuat untuk pengguna ini.</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="profile-section">
+                        <label>Gender</label>
+                        {% if user.profile %}
+                            <span>{{ user.profile.get_gender_display }}</span>
+                        {% else %}
+                            <p>Profile belum dibuat untuk pengguna ini.</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="profile-section">
+                        <label>Date Of Birth</label>
+                        {% if user.profile %}
+                            <span>{{ user.profile.birth_date|date:'Y-m-d' }}</span>
+                        {% else %}
+                        <p>Profile belum dibuat untuk pengguna ini.</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-actions">
+                        <a href="{% url 'profile' username=user.username %}" onclick="showPopup()">Tambah Profil</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

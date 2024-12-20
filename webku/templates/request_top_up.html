@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Permintaan Top-Up</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/request_top_up.css' %}">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link href='https://fonts.googleapis.com/css?family=Kavoon' rel='stylesheet'>
+    <link href='https://fonts.googleapis.com/css?family=Karma' rel='stylesheet'>
+</head>
+<body>
+    <div class="container">
+        <h1>Permintaan Top-Up</h1>
+
+        {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="amount">Jumlah (dalam IDR)</label>
+                <input type="number" name="amount" id="amount" min="1" placeholder="Masukkan jumlah" required>
+            </div>
+            <div class="form-actions">
+                <button type="submit">Kirim Permintaan</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

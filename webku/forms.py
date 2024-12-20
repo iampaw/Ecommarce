@@ -7,6 +7,9 @@ class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
         fields = ['phone_number', 'gender', 'birth_date']
+        widgets = {
+            'birth_date': forms.DateInput(attrs={'type': 'date'}),  # Untuk input tanggal
+        }
 
 class UserUpdateForm(forms.ModelForm):
     class Meta:

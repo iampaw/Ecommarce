@@ -64,7 +64,7 @@ class Profile(models.Model):
     phone_number = models.CharField(max_length=15, default='+62 000000000')
     gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')], default='Male')
     birth_date = models.DateField(default=now)
-    balance = models.DecimalField(default=0, max_digits=10, decimal_places=2)
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
@@ -87,3 +87,12 @@ class Client(models.Model):
 
     def __str__(self):
         return self.username
+    
+class TopUpRequest(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    amount = models.PositiveIntegerField()  # Jumlah yang diminta untuk top-up
+    status = models.CharField(max_length=10, choices=[('Pending', 'Pending'), ('Approved', 'Approved'), ('Rejected', 'Rejected')], default='Pending')
+    requested_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Permintaan top-up oleh {self.user.username} sebesar {self.amount} IDR"

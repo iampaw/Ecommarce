@@ -1,8 +1,8 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
-from .models import Makanan, Makanan2, LoginHistory, Profile, Address
+from .models import Makanan, Makanan2, LoginHistory, Profile, Address, Client, TopUpRequest
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.models import User
 from django.utils.timezone import now
@@ -10,12 +10,23 @@ import logging
 from django.contrib.auth.decorators import login_required
 from .forms import ProfileForm, UserUpdateForm
 from .forms import AddressForm
-from .models import Client 
+from django.contrib import messages
+from decimal import Decimal
+from datetime import datetime
+
 
 logger = logging.getLogger(__name__)
 
 def profile(request):
-    return render(request, 'profile.html')
+    return render(request, 'see_profil.html')
+
+def check_profile_exists(request, username):
+    try:
+        user = User.objects.get(username=username)
+        profile_exists = Profile.objects.filter(user=user).exists()
+        return JsonResponse({'profile_exists': profile_exists})
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
 
 def home_page(request):
     return render(request, 'home.html', {
@@ -135,30 +146,32 @@ def home_page(request):
 
 
 @login_required
-def profile_view(request):
-    # Mengecek apakah profil sudah ada atau membuatnya jika belum ada
+def profile_view(request, username):
     try:
-        profile = request.user.profile
-    except Profile.DoesNotExist:
-        profile = Profile.objects.create(user=request.user)
+        # Ambil pengguna berdasarkan username
+        user = User.objects.get(username=username)
 
-    # Menangani request POST untuk mengupdate profil
-    if request.method == 'POST':
-        phone_number = request.POST.get('phone_number')
-        gender = request.POST.get('gender')
-        birth_date = request.POST.get('birth_date')
+        # Periksa apakah profil sudah ada untuk pengguna tersebut
+        if not hasattr(user, 'profile'):
+            # Jika profil belum ada, buat form untuk input data
+            if request.method == 'POST':
+                form = ProfileForm(request.POST)
+                if form.is_valid():
+                    # Membuat profil baru berdasarkan data form
+                    profile = form.save(commit=False)
+                    profile.user = user  # Menetapkan pengguna yang terkait
+                    profile.save()
+                    return render(request, 'profile.html')
+            else:
+                form = ProfileForm()
 
-        # Mengupdate data profil
-        profile.phone_number = phone_number
-        profile.gender = gender
-        profile.birth_date = birth_date
-        profile.save()
-
-        # Redirect ke halaman profil setelah data disimpan
-        return redirect('profile')
-
-    # Menampilkan halaman profil
-    return render(request, 'profile.html', {'profile': profile})
+            return render(request, 'profile.html', {'form': form, 'user': user})
+        else:
+            # Mengembalikan JsonResponse agar frontend tahu jika profil sudah ada
+            return JsonResponse({'profile_exists': True})  # Profil sudah ada
+    
+    except User.DoesNotExist:
+        return HttpResponse(f"Pengguna dengan username {username} tidak ditemukan.")
 
 @login_required
 def address_view(request):
@@ -242,3 +255,55 @@ def top_up_balance(request):
     # Mengambil semua user yang ada
     users = User.objects.all()
     return render(request, 'topup.html', {'users': users})
+
+def request_top_up(request):
+    if request.method == 'POST':
+        amount = request.POST.get('amount')
+        
+        try:
+            amount = int(amount)
+            # Membuat record permintaan top-up
+            top_up_request = TopUpRequest.objects.create(user=request.user, amount=amount)
+            messages.success(request, "Permintaan top-up berhasil diajukan.")
+            return redirect('profile')  # Kembali ke halaman profil pengguna
+        except ValueError:
+            messages.error(request, "Jumlah yang dimasukkan tidak valid.")
+        
+    return render(request, 'request_top_up.html')
+
+def admin_top_up_requests(request):
+    if not request.user.is_superuser:
+        messages.error(request, "Anda tidak memiliki izin untuk mengakses halaman ini.")
+        return redirect('profile')
+
+    requests = TopUpRequest.objects.filter(status='Pending')  # Ambil permintaan yang statusnya Pending
+    return render(request, 'admin_top_up_requests.html', {'requests': requests})
+
+def approve_top_up(request, request_id):
+    top_up_request = get_object_or_404(TopUpRequest, id=request_id)
+    top_up_request.status = 'Approved'
+    top_up_request.save()
+
+    user = top_up_request.user
+    if not hasattr(user, 'profile'):
+        messages.error(request, f"User {user.username} tidak memiliki profile. Top-up gagal disetujui.")
+        return redirect('admin_top_up_requests')
+
+    # Pastikan saldo ditambah dengan tipe data Decimal
+    top_up_amount = Decimal(top_up_request.amount)
+
+    print(f"Saldo sebelum top-up: {user.profile.balance}")
+    user.profile.balance += top_up_amount
+    user.profile.save()
+    print(f"Saldo sesudah top-up: {user.profile.balance}")
+
+    messages.success(request, f"Top-up sebesar {top_up_amount} IDR disetujui untuk {user.username}.")
+    return redirect('admin_top_up_requests')
+
+def reject_top_up(request, request_id):
+    top_up_request = TopUpRequest.objects.get(id=request_id)
+    top_up_request.status = 'Rejected'
+    top_up_request.save()
+
+    messages.success(request, f"Permintaan top-up oleh {top_up_request.user.username} ditolak.")
+    return redirect('admin_top_up_requests')

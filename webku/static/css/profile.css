@@ -225,3 +225,79 @@ html {
 .profile-section .top-up-button {
     margin-left: 10px;
 }
+
+/* profile-popup.css */
+.popup {
+    display: none;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    animation: slideIn 0.5s ease-out;
+}
+
+.popup.show {
+    display: block;
+    animation: slideIn 0.5s ease-out;
+}
+
+.popup.hide {
+    animation: slideOut 0.5s ease-in;
+}
+
+.popup-content {
+    background-color: #fff;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    max-width: 280px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.popup-icon {
+    font-size: 20px;
+    color: #f0ad4e;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.popup-message {
+    color: #484848;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.popup-message strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 15px;
+    color: #333;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.hidden {
+    display: none;
+}

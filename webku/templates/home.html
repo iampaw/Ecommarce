@@ -99,7 +99,7 @@
         <h2>Shopping Cart</h2>
         <div class="cart-items">
             <!-- Isi keranjang belanja akan ditampilkan di sini -->
-        </div>
+        </div>  
         <div class="cart-footer">
             {% if user.is_authenticated %}
                 <button class="close-btn">CLOSE</button>
@@ -138,13 +138,13 @@
                 window.location.href = "{% url 'signup' %}";
             }
             });
-</script>
+    </script>
         </div>
     </div>
     <div class="description">
         <div class="baground"></div>
-        <span class="text-the">The</span>
-        <span class="text-sweeter">Sweetery</span>
+        <span class="text-the">Coba</span>
+        <span class="text-sweeter">Dessert</span>
     </div>
     </div>
     <div class="banner_right">
@@ -169,7 +169,7 @@
                 <img src="{{ makanan.gambar.url }}" alt="{{ makanan.nama_menu }}">
                 <h1 class="makanan-name">{{ makanan.nama_menu }}</h1>
                 <p class="makanan-price">Rp {{ makanan.harga }}</p>
-                <button class="btn-add-to-card">Add to Cart</button>
+                <button class="btn-add-to-card" {% if makanan.stok == 0 %} disabled {% endif %}>Add to Cart</button>
             </div>
         {% endfor %}
     </div>
@@ -177,21 +177,33 @@
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('searchInput');
             const makananList = document.querySelectorAll('.makanan');
+            const makanan2List = document.querySelectorAll('.makanan2');  // Menambahkan list untuk makanan2
             
             // Event listener untuk input pencarian
             searchInput.addEventListener('input', function() {
                 const query = searchInput.value.toLowerCase();
-    
-                // Mencari makanan yang sesuai dengan input pengguna
+        
+                // Mencari makanan pada list makanan
                 makananList.forEach(makanan => {
                     const makananName = makanan.querySelector('.makanan-name').textContent.toLowerCase();
-    
+        
                     if (makananName.includes(query)) {
-                        // Menggulung halaman ke posisi makanan yang ditemukan
                         makanan.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         makanan.style.border = '2px solid rgb(103, 60, 0)'; // Highlight makanan
                     } else {
                         makanan.style.border = 'none'; // Menghapus highlight jika tidak cocok
+                    }
+                });
+    
+                // Mencari makanan2 pada list makanan2
+                makanan2List.forEach(makanan2 => {
+                    const makanan2Name = makanan2.querySelector('.makanan-name').textContent.toLowerCase();
+        
+                    if (makanan2Name.includes(query)) {
+                        makanan2.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        makanan2.style.border = '2px solid rgb(103, 60, 0)'; // Highlight makanan2
+                    } else {
+                        makanan2.style.border = 'none'; // Menghapus highlight jika tidak cocok
                     }
                 });
             });
@@ -232,7 +244,7 @@
         <img src="{{ makanan2.gambar.url }}" alt="{{ makanan2.nama_category }}">
         <h1 class="makanan-name">{{ makanan2.nama_category }}</h1>
         <p class="makanan-price">Rp {{ makanan2.harga }}</p>
-        <button class="btn-add-to-card">Add to Cart</button>
+        <button class="btn-add-to-card" {% if makanan2.stok == 0 %} disabled {% endif %}>Add to Cart</button>
     </div>
     {% endfor %}
 </div>
@@ -243,7 +255,7 @@
     <div class="about">
         <h2>About</h2>
         <p>
-        The Sweetery is the official account of Sweetery only on the website. We provide dessert products,
+        Coba Dessert is the official account of Dessert only on the website. We provide dessert products,
         sweet foods like you are sweet, such as ice cream, macarons, and others. All products are made
         with quality ingredients and are sure to taste delicious! Find your best dessert here!
     </p>
@@ -257,10 +269,10 @@
 <div class="pages">
     <h2>Pages</h2>
     <ul>
-        <li><a href="#">> Home</a></li>
-        <li><a href="#">> Best Seller</a></li>
-        <li><a href="#">> Menu</a></li>
-        <li><a href="#">> About</a></li>
+        <li><a href="#"> Home</a></li>
+        <li><a href="#category-section">Best Seller</a></li>
+        <li><a href="#category-section2">Category</a></li>
+        <li><a href="#category-section3">About</a></li>
     </ul>
 </div>
 <div class="contact">
@@ -420,12 +432,20 @@ function decreaseQuantity(event) {
     }
 }
 
-// Fungsi untuk menambahkan item ke keranjang
 function addToCart(event) {
     const makananElement = event.target.closest(".makanan, .makanan2");
+    const stock = parseInt(makananElement.getAttribute("data-stock"));
+
+    if (stock === 0) {
+        alert("Maaf, item ini sudah habis.");
+        return;
+    }
+
     const itemName = makananElement.querySelector(".makanan-name").textContent;
     const itemPrice = parseFloat(makananElement.querySelector("p").textContent.replace(/[^0-9.-]+/g, ""));
     const itemImageSrc = makananElement.querySelector("img").src;
+
+    // Lanjutkan untuk menambahkan item ke keranjang
     const cart = JSON.parse(localStorage.getItem("cart")) || [];
     const existingCartItem = Array.from(cartItemsContainer.children).find(item => 
         item.querySelector("h4").textContent === itemName
@@ -438,7 +458,7 @@ function addToCart(event) {
         const unitPrice = parseFloat(existingCartItem.getAttribute("data-unit-price"));
         const newQuantity = parseInt(quantityDisplay.textContent);
 
-        // Format harga sebagai Rupiah
+        // Update tampilan harga
         priceDisplay.textContent = new Intl.NumberFormat('id-ID', {
             style: 'currency',
             currency: 'IDR',
@@ -466,15 +486,16 @@ function addToCart(event) {
                 </div>
             </div>
         `;
+        
+        const increaseButton = cartItem.querySelector(".increase-btn");
+        const decreaseButton = cartItem.querySelector(".decrease-btn");
+        increaseButton.addEventListener("click", increaseQuantity);
+        decreaseButton.addEventListener("click", decreaseQuantity);
 
-            const increaseButton = cartItem.querySelector(".increase-btn");
-            const decreaseButton = cartItem.querySelector(".decrease-btn");
-            increaseButton.addEventListener("click", increaseQuantity);
-            decreaseButton.addEventListener("click", decreaseQuantity);
+        cartItemsContainer.appendChild(cartItem);
+    }
 
-            cartItemsContainer.appendChild(cartItem);
-        }
-        const existingItem = cart.find(item => item.name === itemName);
+    const existingItem = cart.find(item => item.name === itemName);
     if (existingItem) {
         existingItem.quantity += 1;
     } else {
@@ -485,14 +506,38 @@ function addToCart(event) {
             quantity: 1
         });
     }
-    localStorage.setItem("cart", JSON.stringify(cart));
-    }
 
-    // Event listener untuk tombol "Add to Cart" dari kedua kategori
+    // Kirim data keranjang yang diperbarui ke server
+    fetch('/add_to_cart/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),  // Dapatkan CSRF token dari cookies
+        },
+        body: JSON.stringify({
+            name: itemName,
+            price: itemPrice,
+            image: itemImageSrc
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            localStorage.setItem("cart", JSON.stringify(cart));
+        } else {
+            alert("Gagal menambahkan item ke keranjang");
+        }
+    })
+    .catch(error => {
+        console.error("Error:", error);
+    });
+}
+
+    // Event listener untuk tombol "Add to Cart"
     addToCartButtons.forEach(button => {
         button.addEventListener("click", addToCart);
     });
-
+    
     cartIcon.addEventListener("click", openCartSidebar);
     closeBtn.addEventListener("click", closeCartSidebar);
 

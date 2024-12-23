@@ -69,7 +69,7 @@ html {
     color: #c85c42;
     position: relative;
     top: 250px;
-    margin-left: 40px; /* Beri jarak horizontal untuk menyesuaikan tata letak */
+    margin-left: 20px;
     font-family: 'Kavoon';
 }
 
@@ -795,4 +795,5 @@ html {
     top: 20px;  /* Pop-up moves down to this position */
     transition: top 0.4s ease-in-out, opacity 0.4s ease, visibility 0s linear 0s;  /* Transition both top and opacity */
 }
+
 

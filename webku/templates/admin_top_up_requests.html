@@ -13,23 +13,36 @@
 </head>
 <body>
     <div class="container">
-        <h1>Permintaan Top-Up yang Belum Diproses</h1>
-
+        <h1>Permintaan Top-Up</h1>
         <table>
             <tr>
-                <th>Pengguna</th>
-                <th>Jumlah</th>
+                <th>No</th>
+                <th>Username</th>
+                <th>Total</th>
                 <th>Status</th>
-                <th>Aksi</th>
+                <th>Action</th>
             </tr>
             {% for request in requests %}
             <tr>
+                <td>{{ forloop.counter }}</td>
                 <td>{{ request.user.username }}</td>
-                <td>{{ request.amount }} IDR</td>
-                <td>{{ request.status }}</td>
+                <td>Rp.{{ request.amount }}</td>
                 <td>
-                    <a href="{% url 'approve_top_up' request.id %}">Setujui</a> |
-                    <a href="{% url 'reject_top_up' request.id %}">Tolak</a>
+                    {% if request.status == 'Pending' %}
+                        <span class="status-pending">Pending</span>
+                    {% elif request.status == 'Sukses' %}
+                        <span class="status-sukses">Sukses</span>
+                    {% elif request.status == 'Approved' %}
+                        <span class="status-sukses">Approved</span>
+                    {% else %}
+                        <span class="status-waiting">Waiting</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if request.status == 'Pending' %}
+                        <a href="{% url 'approve_top_up' request.id %}" class="action-button">Setujui</a>
+                        <a href="{% url 'reject_top_up' request.id %}" class="action-button reject">Tolak</a>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

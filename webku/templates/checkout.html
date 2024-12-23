@@ -30,6 +30,9 @@
     <div class="cart-footer">
       <div class="total"></div>
       <div class="total-price"></div>
+      <div class="user-balance">
+        <p>Saldo Anda: <span id="user-balance"></span></p>
+      </div>
   </div>
   <div class="button-container">
     <button class="cancel">Cancel</button>
@@ -126,6 +129,49 @@
   updateCart(); // Initial rendering of cart
 });
 
+  </script>
+
+  <script>
+    document.getElementById('checkout-btn').addEventListener('click', function() {
+  const totalAmount = parseFloat(totalAmountElement.innerText.replace('Rp. ', '').replace(',', ''));
+  const userBalance = parseFloat(document.getElementById('user-balance').innerText.replace('Rp. ', '').replace(',', ''));
+  
+  if (userBalance >= totalAmount) {
+    // Proses checkout
+    alert("Checkout berhasil. Saldo Anda telah terkurangi.");
+    updateBalance(userBalance - totalAmount);
+    clearCart();
+  } else {
+    // Menampilkan pesan jika saldo tidak cukup
+    alert("Saldo tidak cukup untuk menyelesaikan checkout.");
+  }
+});
+
+function updateBalance(newBalance) {
+  // Kirim request untuk memperbarui saldo ke backend
+  fetch('/update_balance/', {
+    method: 'POST',
+    body: JSON.stringify({ balance: newBalance }),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrf_token,  // Pastikan csrf_token ada
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      document.getElementById('user-balance').innerText = `Rp. ${newBalance.toFixed(2)}`;
+    } else {
+      alert("Gagal memperbarui saldo.");
+    }
+  });
+}
+
+function clearCart() {
+  // Hapus keranjang dan redirect ke halaman sukses
+  localStorage.removeItem('cart');
+  window.location.href = '/order_success/';
+}
   </script>
 </body>
 </html>

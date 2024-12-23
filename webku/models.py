@@ -10,6 +10,7 @@ class Makanan(models.Model):
     nama_menu = models.CharField(max_length=100)
     harga = models.DecimalField(max_digits=10, decimal_places=2)
     gambar = models.ImageField(upload_to='makanan_images/')
+    stok = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return self.nama_menu
@@ -18,6 +19,7 @@ class Makanan2(models.Model):
     nama_category = models.CharField(max_length=100)
     harga = models.DecimalField(max_digits=10, decimal_places=2)
     gambar = models.ImageField(upload_to='category_makanan/')
+    stok = models.PositiveIntegerField(default=0)
     category = models.CharField(max_length=50, default='', choices=[
         ('Ice Cream', 'Ice Cream'),
         ('Maccarone', 'Maccarone'),
@@ -96,3 +98,18 @@ class TopUpRequest(models.Model):
 
     def __str__(self):
         return f"Permintaan top-up oleh {self.user.username} sebesar {self.amount} IDR"
+    
+class TransactionHistory(models.Model):
+    STATUS_CHOICES = [
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    processed_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.status} - {self.amount}"
+    

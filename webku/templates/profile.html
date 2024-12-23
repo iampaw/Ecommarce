@@ -1,46 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
+{% load static %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buat Profil</title>
+    <title>E-Commerce | RKS-312</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/buat_profile.css' %}">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link href='https://fonts.googleapis.com/css?family=Kavoon' rel='stylesheet'>
+    <link href='https://fonts.googleapis.com/css?family=Karma' rel='stylesheet'>
 </head>
 <body>
-    <h2>Buat Profil untuk {{ user.username }}</h2>
-
-    <form method="POST">
-        {% csrf_token %}
-        {{ form.as_p }}  <!-- Menampilkan form dalam bentuk paragraf -->
-        <button type="submit">Buat Profil</button>
-    </form>
-    {% if error_message %}
-    <div id="errorModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <p>{{ error_message }}</p>
+    <div data-aos="fade-up">
+        <h2>Membuat Profil untuk {{ user.username }}</h2>
+        <form method="POST">
+            {% csrf_token %}
+            {{ form.as_p }}  <!-- Menampilkan form dalam bentuk paragraf -->
+            <button type="submit">Buat Profil</button>
+        </form>
+        {% if error_message %}
+        <div id="errorModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <p>{{ error_message }}</p>
+            </div>
         </div>
-    </div>
-    <script>
-        // Menampilkan modal jika error_message ada
-        var modal = document.getElementById("errorModal");
-        var span = document.getElementsByClassName("close")[0];
+        <script>
+            // Menampilkan modal jika error_message ada
+            var modal = document.getElementById("errorModal");
+            var span = document.getElementsByClassName("close")[0];
 
-        // Menampilkan modal
-        modal.style.display = "block";
+            // Menampilkan modal
+            modal.style.display = "block";
 
-        // Menutup modal ketika klik pada 'X'
-        span.onclick = function() {
-            modal.style.display = "none";
-        }
-
-        // Menutup modal jika klik di luar modal
-        window.onclick = function(event) {
-            if (event.target == modal) {
+            // Menutup modal ketika klik pada 'X'
+            span.onclick = function() {
                 modal.style.display = "none";
             }
-        }
+
+            // Menutup modal jika klik di luar modal
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+        </script>
+        {% endif %} 
+        <a href="{% url 'home' %}">Kembali ke halaman utama</a>
+    </div>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init();
     </script>
-    {% endif %}
-    <a href="{% url 'home' %}">Kembali ke halaman utama</a>
 </body>
 </html>

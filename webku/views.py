@@ -2,11 +2,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
-from .models import Makanan, Makanan2, LoginHistory, Profile, Address, Client, TopUpRequest
+from .models import Makanan, Makanan2, LoginHistory, Profile, Address, Client, TopUpRequest, TransactionHistory
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.models import User
 from django.utils.timezone import now
-import logging
+import logging, json
 from django.contrib.auth.decorators import login_required
 from .forms import ProfileForm, UserUpdateForm
 from .forms import AddressForm
@@ -275,35 +275,67 @@ def admin_top_up_requests(request):
     if not request.user.is_superuser:
         messages.error(request, "Anda tidak memiliki izin untuk mengakses halaman ini.")
         return redirect('profile')
-
-    requests = TopUpRequest.objects.filter(status='Pending')  # Ambil permintaan yang statusnya Pending
+    
+    requests = TopUpRequest.objects.all().order_by('-requested_at')  # Menggunakan requested_at
     return render(request, 'admin_top_up_requests.html', {'requests': requests})
 
 def approve_top_up(request, request_id):
     top_up_request = get_object_or_404(TopUpRequest, id=request_id)
-    top_up_request.status = 'Approved'
+
+    # Perbarui status dan tambah saldo pengguna
+    top_up_request.status = 'Sukses'
     top_up_request.save()
 
     user = top_up_request.user
-    if not hasattr(user, 'profile'):
-        messages.error(request, f"User {user.username} tidak memiliki profile. Top-up gagal disetujui.")
-        return redirect('admin_top_up_requests')
-
-    # Pastikan saldo ditambah dengan tipe data Decimal
     top_up_amount = Decimal(top_up_request.amount)
-
-    print(f"Saldo sebelum top-up: {user.profile.balance}")
     user.profile.balance += top_up_amount
     user.profile.save()
-    print(f"Saldo sesudah top-up: {user.profile.balance}")
+
+    # Simpan ke riwayat transaksi
+    TransactionHistory.objects.create(
+        user=user,
+        amount=top_up_request.amount,
+        status='Approved'
+    )
+
+    # Hapus permintaan top-up setelah disetujui (opsional)
+    top_up_request.delete()
 
     messages.success(request, f"Top-up sebesar {top_up_amount} IDR disetujui untuk {user.username}.")
     return redirect('admin_top_up_requests')
 
 def reject_top_up(request, request_id):
-    top_up_request = TopUpRequest.objects.get(id=request_id)
-    top_up_request.status = 'Rejected'
-    top_up_request.save()
+    top_up_request = get_object_or_404(TopUpRequest, id=request_id)
+
+    # Simpan ke riwayat transaksi
+    TransactionHistory.objects.create(
+        user=top_up_request.user,
+        amount=top_up_request.amount,
+        status='Rejected'
+    )
+
+    # Hapus permintaan top-up
+    top_up_request.delete()
 
     messages.success(request, f"Permintaan top-up oleh {top_up_request.user.username} ditolak.")
     return redirect('admin_top_up_requests')
+
+
+@login_required
+def update_balance(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            new_balance = data.get('balance')
+
+            # Pastikan saldo valid dan pengguna terautentikasi
+            if new_balance is not None and new_balance >= 0:
+                request.user.profile.balance = new_balance
+                request.user.profile.save()
+
+                return JsonResponse({'success': True})
+            else:
+                return JsonResponse({'success': False, 'error': 'Nilai saldo tidak valid'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Metode request tidak valid'})

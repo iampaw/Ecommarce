@@ -62,7 +62,7 @@ class LoginHistory(models.Model):
     
 
 class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     phone_number = models.CharField(max_length=15, default='+62 000000000')
     gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')], default='Male')
     birth_date = models.DateField(default=now)
@@ -113,3 +113,35 @@ class TransactionHistory(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.status} - {self.amount}"
     
+class HistoryLog(models.Model):
+    ACTION_CHOICES = [
+        ('create', 'Create'),
+        ('update', 'Update'),
+        ('delete', 'Delete'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    timestamp = models.DateTimeField(default=now)
+    old_data = models.JSONField(null=True, blank=True)
+    new_data = models.JSONField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.action} - {self.user.username} at {self.timestamp}"
+    
+
+
+class Order(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    status = models.CharField(max_length=50, default='Pending')  # Pending, Completed, etc.
+
+    def __str__(self):
+        return f"Order #{self.id} - {self.user.username}"
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
+    makanan = models.ForeignKey(Makanan, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+    harga_total = models.DecimalField(max_digits=10, decimal_places=2)

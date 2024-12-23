@@ -17,6 +17,12 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+def checkout(request):
+    return redirect('order_success')
+
+def order_success(request):
+    return render(request, 'order_success.html')
+
 def profile(request):
     return render(request, 'see_profil.html')
 
@@ -33,28 +39,84 @@ def home_page(request):
         'user_authenticated': request.user.is_authenticated
     })  # Pastikan Anda memiliki template 'home.html'
 
+@login_required
 def checkout(request):
     cart = request.session.get("cart", [])
-    return render(request, "checkout.html", {"cart": cart})
+    try:
+        # Mengecek apakah pengguna memiliki alamat yang tersimpan
+        address = Address.objects.get(user=request.user)
+    except Address.DoesNotExist:
+        # Jika tidak ada alamat, arahkan pengguna ke halaman pengisian alamat
+        return redirect('address')
+
+    # Pastikan saldo cukup untuk menyelesaikan transaksi
+    user_balance = request.user.profile.balance
+    total_price = sum(item['price'] * item['quantity'] for item in cart)
+
+    if request.method == 'POST':
+        if user_balance >= total_price:
+            # Kurangi saldo pengguna
+            request.user.profile.balance -= total_price
+            request.user.profile.save()
+
+            # Kosongkan keranjang belanja
+            request.session['cart'] = []
+
+            # Redirect ke halaman sukses
+            return redirect('order_success')
+        else:
+            return render(request, 'checkout.html', {
+                'cart': cart,
+                'error_message': "Saldo tidak cukup. Silakan tambahkan saldo Anda."
+            })
+
+    return render(request, "checkout.html", {"cart": cart, "user_balance": user_balance})
 
 def address_view(request):
     return render(request, 'address.html')
 
 @login_required
 def add_to_cart(request):
-    if request.method == "POST":
-        item = request.POST
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Invalid method"}, status=405)
+    
+    try:
+        data = json.loads(request.body)
         cart = request.session.get("cart", [])
-        cart.append({
-            "name": item.get("name"),
-            "price": float(item.get("price")),
-            "image": item.get("image"),
-        })
+        
+        new_item = {
+            "name": data.get("name"),
+            "price": float(data.get("price")),
+            "image": data.get("image"),
+            "quantity": 1
+        }
+        
+        # Check if item already exists
+        item_exists = False
+        for item in cart:
+            if item["name"] == new_item["name"]:
+                item["quantity"] += 1
+                item_exists = True
+                break
+                
+        if not item_exists:
+            cart.append(new_item)
+            
         request.session["cart"] = cart
-        return JsonResponse({"success": True})
-    else:
-        # Jika user tidak login, redirect ke halaman signup
-        return redirect('signup')  # Atau bisa juga 'login' jika ingin halaman login terlebih dahulu
+        request.session.modified = True
+        
+        return JsonResponse({
+            "success": True,
+            "cart": cart,
+            "total_items": sum(item["quantity"] for item in cart)
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
 
 def signup(request):
     if request.method == 'POST':

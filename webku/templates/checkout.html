@@ -31,147 +31,17 @@
       <div class="total"></div>
       <div class="total-price"></div>
       <div class="user-balance">
-        <p>Saldo Anda: <span id="user-balance"></span></p>
+        <p>Saldo Anda: {{ user.profile.balance }}<span id="user-balance"></span></p>
       </div>
   </div>
   <div class="button-container">
     <button class="cancel">Cancel</button>
-    <button id="checkout-btn">Checkout</button>
+    <form id="checkout-form" method="POST" action="{% url 'checkout' %}">
+      {% csrf_token %}
+      <button type="button" id="checkout-btn">Checkout</button>
+  </form>
   </div>
 </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-  const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
-  const cartItemsContainer = document.getElementById("cart-items");
-  const totalAmountElement = document.querySelector(".cart-footer .total-price");
-  const totalItemsElement = document.querySelector(".cart-footer .total");
-  const selectAllCheckbox = document.getElementById("select-all");
-
-  function updateCart() {
-    cartItemsContainer.innerHTML = ""; // Clear the cart
-    let totalAmount = 0;
-    let totalItems = 0;
-
-    cartItems.forEach((item, index) => {
-      const itemTotal = item.price * item.quantity;
-      totalAmount += item.selected ? itemTotal : 0; // Only add to total if selected
-      totalItems += item.selected ? item.quantity : 0; // Only count quantity if selected
-
-      const itemDiv = document.createElement("div");
-      itemDiv.classList.add("cart-item");
-      itemDiv.innerHTML = `
-        <div><input type="checkbox" class="select-item" data-index="${index}" ${item.selected ? 'checked' : ''}/></div>
-        <div class="product-info">
-          <img src="${item.image}" alt="${item.name}" width="50"/>
-          <div>${item.name}</div>
-        </div>
-        <div>Rp. ${item.price.toFixed(2)}</div>
-        <div class="quantity-control">
-          <button class="decrease-quantity" data-index="${index}">-</button>
-          <input type="text" value="${item.quantity}" readonly/>
-          <button class="increase-quantity" data-index="${index}">+</button>
-        </div>
-        <div class="total-price">Rp. ${itemTotal.toFixed(2)}</div>
-      `;
-
-      cartItemsContainer.appendChild(itemDiv);
-    });
-
-    totalAmountElement.innerText = `Rp. ${totalAmount.toFixed(2)}`;
-    totalItemsElement.innerText = `Total (${totalItems} Items):`;
-
-    addEventListeners();
-  }
-
-  function addEventListeners() {
-    document.querySelectorAll('.increase-quantity').forEach(button => {
-      button.addEventListener('click', function() {
-        const itemIndex = this.getAttribute('data-index');
-        cartItems[itemIndex].quantity += 1; // Increase quantity
-        localStorage.setItem('cart', JSON.stringify(cartItems));
-        updateCart();
-      });
-    });
-
-    document.querySelectorAll('.decrease-quantity').forEach(button => {
-      button.addEventListener('click', function() {
-        const itemIndex = this.getAttribute('data-index');
-        if (cartItems[itemIndex].quantity > 1) {
-          cartItems[itemIndex].quantity -= 1; // Decrease quantity
-        } else {
-          cartItems.splice(itemIndex, 1); // Remove item if quantity is 1
-        }
-        localStorage.setItem('cart', JSON.stringify(cartItems));
-        updateCart();
-      });
-    });
-
-    document.querySelectorAll('.select-item').forEach(checkbox => {
-      checkbox.addEventListener('change', function() {
-        const itemIndex = this.getAttribute('data-index');
-        cartItems[itemIndex].selected = this.checked; // Mark as selected or unselected
-        localStorage.setItem('cart', JSON.stringify(cartItems));
-        updateCart(); // Recalculate totals after selection change
-      });
-    });
-
-    selectAllCheckbox.addEventListener('change', function() {
-      const isChecked = this.checked;
-      cartItems.forEach((item) => {
-        item.selected = isChecked;
-      });
-      localStorage.setItem('cart', JSON.stringify(cartItems));
-      updateCart();
-    });
-  }
-
-  updateCart(); // Initial rendering of cart
-});
-
-  </script>
-
-  <script>
-    document.getElementById('checkout-btn').addEventListener('click', function() {
-  const totalAmount = parseFloat(totalAmountElement.innerText.replace('Rp. ', '').replace(',', ''));
-  const userBalance = parseFloat(document.getElementById('user-balance').innerText.replace('Rp. ', '').replace(',', ''));
-  
-  if (userBalance >= totalAmount) {
-    // Proses checkout
-    alert("Checkout berhasil. Saldo Anda telah terkurangi.");
-    updateBalance(userBalance - totalAmount);
-    clearCart();
-  } else {
-    // Menampilkan pesan jika saldo tidak cukup
-    alert("Saldo tidak cukup untuk menyelesaikan checkout.");
-  }
-});
-
-function updateBalance(newBalance) {
-  // Kirim request untuk memperbarui saldo ke backend
-  fetch('/update_balance/', {
-    method: 'POST',
-    body: JSON.stringify({ balance: newBalance }),
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrf_token,  // Pastikan csrf_token ada
-    }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      document.getElementById('user-balance').innerText = `Rp. ${newBalance.toFixed(2)}`;
-    } else {
-      alert("Gagal memperbarui saldo.");
-    }
-  });
-}
-
-function clearCart() {
-  // Hapus keranjang dan redirect ke halaman sukses
-  localStorage.removeItem('cart');
-  window.location.href = '/order_success/';
-}
-  </script>
 </body>
 </html>

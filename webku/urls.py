@@ -22,6 +22,9 @@ urlpatterns = [
     path('dashboard/approve-top-up/<int:request_id>/', views.approve_top_up, name='approve_top_up'),
     path('dashboard/reject-top-up/<int:request_id>/', views.reject_top_up, name='reject_top_up'),
     path('check-profile/<str:username>/', check_profile_exists, name='check_profile_exists'),
+    path('order_success/', views.order_success, name='order_success'),
+    path('add_to_cart/', views.add_to_cart, name='add_to_cart'),
+
     
     
 

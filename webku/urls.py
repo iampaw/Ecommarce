@@ -24,7 +24,8 @@ urlpatterns = [
     path('check-profile/<str:username>/', check_profile_exists, name='check_profile_exists'),
     path('order_success/', views.order_success, name='order_success'),
     path('add_to_cart/', views.add_to_cart, name='add_to_cart'),
-
+    path('get_cart/', views.get_cart, name='get_cart'),
+    
     
     
 

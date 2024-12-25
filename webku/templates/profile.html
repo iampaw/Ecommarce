@@ -18,7 +18,10 @@
             {% csrf_token %}
             {{ form.as_p }}  <!-- Menampilkan form dalam bentuk paragraf -->
             
+            <!-- Tombol Save -->
+            <button type="submit" class="save-btn">Save</button>
         </form>
+
         {% if error_message %}
         <div id="errorModal" class="modal">
             <div class="modal-content">
@@ -46,7 +49,9 @@
                 }
             }
         </script>
-        {% endif %} 
+        {% endif %}
+
+        <!-- Link untuk kembali ke halaman utama -->
         <a href="{% url 'home' %}">Kembali ke halaman utama</a>
     </div>
 

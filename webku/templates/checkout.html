@@ -11,185 +11,155 @@
   <link href='https://fonts.googleapis.com/css?family=Karma' rel='stylesheet'>
 </head>
 <body>
-  <div class="cart-container">
-    <!-- Back Button Section -->
-    <div class="header">
-      <button class="back-button" onclick="window.location.href='{% url 'home' %}'">&#8592; Your Details Order</button>
-    </div>
-
-    <div class="cart-header"> 
-      <div>Product</div>
-      <div>Unit Price</div>
-      <div>Quantity</div>
-      <div>Total Price</div>
-    </div>
-
-    <div id="cart-items">
-      <!-- Cart items will be dynamically added here -->
-    </div>
-    <div class="cart-footer">
-      <div class="total"></div>
-      <div class="total-price"></div>
-      <div class="user-balance">
-        <p>Saldo Anda: {{ user.profile.balance }}<span id="user-balance"></span></p>
-      </div>
+<!-- checkout.html -->
+<div class="cart-container">
+  <!-- Back Button Section -->
+  <div class="header">
+    <button class="back-button" onclick="window.location.href='{% url 'home' %}'">&#8592; Your Details Order</button>
   </div>
+
+  <div class="cart-header"> 
+    <div>Product</div>
+    <div>Unit Price</div>
+    <div>Quantity</div>
+    <div>Total Price</div>
+  </div>
+
+  <div id="cart-items">
+    <!-- Cart items will be dynamically added here -->
+  </div>
+  
+  <div class="cart-footer">
+    <div class="total"></div>
+    <div class="total-price"></div>
+    <div class="user-balance">
+      <p>Saldo Anda: Rp. <span id="user-balance">{{ user.profile.balance }}</span></p>
+    </div>
+  </div>
+
   <div class="button-container">
-    <button class="cancel">Cancel</button>
+    <button class="cancel" onclick="window.location.href='{% url 'home' %}'">Cancel</button>
     <form id="checkout-form" method="POST" action="{% url 'checkout' %}">
       {% csrf_token %}
+      <input type="hidden" name="cart" id="cart-data">
+      <input type="hidden" name="total_price" id="total-price">
       <button type="button" id="checkout-btn">Checkout</button>
-  </form>
+    </form>
   </div>
 </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-  const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
-  const cartItemsContainer = document.getElementById("cart-items");
-  const totalAmountElement = document.querySelector(".cart-footer .total-price");
-  const totalItemsElement = document.querySelector(".cart-footer .total");
-  const selectAllCheckbox = document.getElementById("select-all");
+    const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+    const cartItemsContainer = document.getElementById("cart-items");
+    const totalAmountElement = document.querySelector(".cart-footer .total-price");
+    const totalItemsElement = document.querySelector(".cart-footer .total");
+    const userBalanceElement = document.getElementById('user-balance');
+    const formatCurrency = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' });
 
-  function updateCart() {
-    cartItemsContainer.innerHTML = ""; // Clear the cart
-    let totalAmount = 0;
-    let totalItems = 0;
+    // Fungsi untuk memperbarui tampilan keranjang
+    function updateCart() {
+      cartItemsContainer.innerHTML = ""; // Clear the cart
+      let totalAmount = 0;
+      let totalItems = 0;
 
-    cartItems.forEach((item, index) => {
-      const itemTotal = item.price * item.quantity;
-      totalAmount += item.selected ? itemTotal : 0; // Only add to total if selected
-      totalItems += item.selected ? item.quantity : 0; // Only count quantity if selected
+      // Menghitung total harga dan jumlah item yang dipilih
+      cartItems.forEach((item, index) => {
+        const itemTotal = item.price * item.quantity;
+        totalAmount += item.selected ? itemTotal : 0; // Hanya menambahkan total jika dipilih
+        totalItems += item.selected ? item.quantity : 0; // Hanya menghitung jumlah item yang dipilih
 
-      const itemDiv = document.createElement("div");
-      itemDiv.classList.add("cart-item");
-      itemDiv.innerHTML = `
-        <div><input type="checkbox" class="select-item" data-index="${index}" ${item.selected ? 'checked' : ''}/></div>
-        <div class="product-info">
-          <img src="${item.image}" alt="${item.name}" width="50"/>
-          <div>${item.name}</div>
-        </div>
-        <div>Rp. ${item.price.toFixed(2)}</div>
-        <div class="quantity-control">
-          <button class="decrease-quantity" data-index="${index}">-</button>
-          <input type="text" value="${item.quantity}" readonly/>
-          <button class="increase-quantity" data-index="${index}">+</button>
-        </div>
-        <div class="total-price">Rp. ${itemTotal.toFixed(2)}</div>
-      `;
-
-      cartItemsContainer.appendChild(itemDiv);
-    });
-
-    totalAmountElement.innerText = `Rp. ${totalAmount.toFixed(2)}`;
-    totalItemsElement.innerText = `Total (${totalItems} Items):`;
-
-    addEventListeners();
-  }
-
-  function addEventListeners() {
-    document.querySelectorAll('.increase-quantity').forEach(button => {
-      button.addEventListener('click', function() {
-        const itemIndex = this.getAttribute('data-index');
-        cartItems[itemIndex].quantity += 1; // Increase quantity
-        localStorage.setItem('cart', JSON.stringify(cartItems));
-        updateCart();
+        const itemDiv = document.createElement("div");
+        itemDiv.classList.add("cart-item");
+        itemDiv.innerHTML = `
+          <div><input type="checkbox" class="select-item" data-index="${index}" ${item.selected ? 'checked' : ''}/></div>
+          <div class="product-info">
+            <img src="${item.image}" alt="${item.name}" width="50"/>
+            <div>${item.name}</div>
+          </div>
+          <div>${formatCurrency.format(item.price)}</div> <!-- Format hanya dari JS -->
+          <div class="quantity-control">
+            <button class="decrease-quantity" data-index="${index}">-</button>
+            <input type="text" value="${item.quantity}" readonly/>
+            <button class="increase-quantity" data-index="${index}">+</button>
+          </div>
+          <div class="total-price">${formatCurrency.format(itemTotal)}</div> <!-- Format hanya dari JS -->
+        `;
+        cartItemsContainer.appendChild(itemDiv);
       });
-    });
 
-    document.querySelectorAll('.decrease-quantity').forEach(button => {
-      button.addEventListener('click', function() {
-        const itemIndex = this.getAttribute('data-index');
-        if (cartItems[itemIndex].quantity > 1) {
-          cartItems[itemIndex].quantity -= 1; // Decrease quantity
-        } else {
-          cartItems.splice(itemIndex, 1); // Remove item if quantity is 1
-        }
-        localStorage.setItem('cart', JSON.stringify(cartItems));
-        updateCart();
+      // Memperbarui total harga dan jumlah item di footer
+      totalAmountElement.innerText = formatCurrency.format(totalAmount); // Format total amount dengan JS
+      totalItemsElement.innerText = `Total (${totalItems} Items):`;
+
+      addEventListeners(); // Menambahkan event listener
+    }
+
+    // Fungsi untuk menambahkan event listeners pada elemen
+    function addEventListeners() {
+      document.querySelectorAll('.increase-quantity').forEach(button => {
+        button.addEventListener('click', function() {
+          const itemIndex = this.getAttribute('data-index');
+          cartItems[itemIndex].quantity += 1; // Menambah jumlah item
+          localStorage.setItem('cart', JSON.stringify(cartItems));
+          updateCart();
+        });
       });
-    });
 
-    document.querySelectorAll('.select-item').forEach(checkbox => {
-      checkbox.addEventListener('change', function() {
-        const itemIndex = this.getAttribute('data-index');
-        cartItems[itemIndex].selected = this.checked; // Mark as selected or unselected
-        localStorage.setItem('cart', JSON.stringify(cartItems));
-        updateCart(); // Recalculate totals after selection change
+      document.querySelectorAll('.decrease-quantity').forEach(button => {
+        button.addEventListener('click', function() {
+          const itemIndex = this.getAttribute('data-index');
+          if (cartItems[itemIndex].quantity > 1) {
+            cartItems[itemIndex].quantity -= 1; // Mengurangi jumlah item
+          } else {
+            cartItems.splice(itemIndex, 1); // Menghapus item jika jumlahnya 1
+          }
+          localStorage.setItem('cart', JSON.stringify(cartItems));
+          updateCart();
+        });
       });
-    });
 
-    selectAllCheckbox.addEventListener('change', function() {
-      const isChecked = this.checked;
-      cartItems.forEach((item) => {
-        item.selected = isChecked;
+      document.querySelectorAll('.select-item').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+          const itemIndex = this.getAttribute('data-index');
+          cartItems[itemIndex].selected = this.checked; // Menandai sebagai dipilih atau tidak
+          localStorage.setItem('cart', JSON.stringify(cartItems));
+          updateCart(); // Menghitung ulang total setelah perubahan seleksi
+        });
       });
-      localStorage.setItem('cart', JSON.stringify(cartItems));
-      updateCart();
-    });
-  }
+    }
 
-  updateCart(); // Initial rendering of cart
-});
+    updateCart(); // Rendering keranjang pertama kali
 
-  </script>
-
-  <script>
+    // Menangani klik tombol checkout
     document.getElementById('checkout-btn').addEventListener('click', function() {
-  const totalAmount = parseFloat(totalAmountElement.innerText.replace('Rp. ', '').replace(',', ''));
-  const userBalance = parseFloat(document.getElementById('user-balance').innerText.replace('Rp. ', '').replace(',', ''));
-  
-  if (userBalance >= totalAmount) {
-    // Proses checkout
-    alert("Checkout berhasil. Saldo Anda telah terkurangi.");
-    updateBalance(userBalance - totalAmount);
-    clearCart();
-  } else {
-    // Menampilkan pesan jika saldo tidak cukup
-    alert("Saldo tidak cukup untuk menyelesaikan checkout.");
-  }
-});
+      // Periksa jika tidak ada item yang dipilih
+      const selectedItems = cartItems.filter(item => item.selected);  // Ambil item yang dipilih
 
-function updateBalance(newBalance) {
-  // Kirim request untuk memperbarui saldo ke backend
-  fetch('/update_balance/', {
-    method: 'POST',
-    body: JSON.stringify({ balance: newBalance }),
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrf_token,  // Pastikan csrf_token ada
-    }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      document.getElementById('user-balance').innerText = `Rp. ${newBalance.toFixed(2)}`;
-    } else {
-      alert("Gagal memperbarui saldo.");
-    }
+      if (selectedItems.length === 0) {
+        alert("Silakan pilih item terlebih dahulu sebelum melakukan checkout.");
+        return;  // Tidak melanjutkan checkout jika tidak ada item yang dipilih
+      }
+
+      const totalAmount = parseFloat(totalAmountElement.innerText.replace(/[^\d.-]/g, '')); // Mengonversi total harga ke angka
+      const userBalance = parseFloat(userBalanceElement.innerText.replace(/[^\d.-]/g, '')); // Mengonversi saldo pengguna ke angka
+
+      if (totalAmount > userBalance) {
+        alert("Saldo tidak cukup untuk checkout.");
+      } else {
+        // Mengisi data keranjang yang dipilih dan total harga ke input tersembunyi
+        document.getElementById('cart-data').value = JSON.stringify(selectedItems); // Hanya item yang dipilih
+        document.getElementById('total-price').value = totalAmount;
+
+        // Mengirimkan formulir untuk memproses checkout
+        document.getElementById('checkout-form').submit();
+      }
+    });
   });
-}
-
-function clearCart() {
-  // Hapus keranjang dan redirect ke halaman sukses
-  localStorage.removeItem('cart');
-  window.location.href = '/order_success/';
-}
   </script>
 
-  <script>
-    document.getElementById('checkout-btn').addEventListener('click', function() {
-        const totalAmount = parseFloat(document.querySelector('.total-price').innerText.replace('Rp. ', '').replace(',', ''));
-        const userBalance = parseFloat(document.getElementById('user-balance').innerText.replace('Rp. ', '').replace(',', ''));
 
-        if (totalAmount > userBalance) {
-            alert("Saldo tidak cukup untuk checkout.");
-        } else {
-            // Redirect ke proses checkout (backend akan mengecek saldo dan alamat)
-            document.getElementById('checkout-form').submit();
-        }
-    });
 </script>
 
-</body>
-</html> kenapa menu yg di chekout nya tidak muncul
+</body> 
+</html>

@@ -1,6 +1,6 @@
 # webku/models.py
 
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import User
 from django.contrib import admin
 from django.utils.timezone import now
@@ -25,7 +25,6 @@ class Makanan2(models.Model):
         ('Maccarone', 'Maccarone'),
         ('Cookies', 'Cookies'),
         ('Short Cake', 'Short Cake'),
-    
 
     ])
 
@@ -108,6 +107,7 @@ class TransactionHistory(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    description = models.TextField()  # Pastikan kolom description ada
     processed_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -129,13 +129,17 @@ class HistoryLog(models.Model):
     def __str__(self):
         return f"{self.action} - {self.user.username} at {self.timestamp}"
     
-
-
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, choices=[
+        ('Pending', 'Pending'),
+        ('Confirmed', 'Confirmed'),
+        ('Shipped', 'Shipped'),
+        ('Delivered', 'Delivered'),
+        ('Cancelled', 'Cancelled')
+    ], default='Pending')  # Default status saat pesanan dibuat
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    status = models.CharField(max_length=50, default='Pending')  # Pending, Completed, etc.
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)  # Field total harga
 
     def __str__(self):
         return f"Order #{self.id} - {self.user.username}"
@@ -145,3 +149,19 @@ class OrderItem(models.Model):
     makanan = models.ForeignKey(Makanan, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
     harga_total = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def save(self, *args, **kwargs):
+        # Mulai transaksi untuk memastikan integritas data
+        with transaction.atomic():
+            # Pastikan stok cukup sebelum melanjutkan
+            if self.makanan.stok < self.quantity:
+                raise ValueError(f"Stok untuk {self.makanan.nama_menu} tidak cukup untuk quantity yang diminta.")
+
+            # Menghitung harga total berdasarkan harga makanan dan quantity
+            self.harga_total = self.makanan.harga * self.quantity
+
+            # Kurangi stok makanan sesuai dengan jumlah yang dipesan
+            self.makanan.stok -= self.quantity
+            self.makanan.save()  # Pastikan stok disimpan
+
+            super().save(*args, **kwargs)

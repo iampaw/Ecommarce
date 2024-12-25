@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
-from .models import Makanan, Makanan2, LoginHistory, Profile, Address, Client, TopUpRequest, TransactionHistory
+from .models import Makanan, Makanan2, LoginHistory, Profile, Address, Client, TopUpRequest, TransactionHistory, OrderItem, Order, transaction
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.models import User
 from django.utils.timezone import now
@@ -11,8 +11,11 @@ from django.contrib.auth.decorators import login_required
 from .forms import ProfileForm, UserUpdateForm
 from .forms import AddressForm
 from django.contrib import messages
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from datetime import datetime
+from itertools import chain
+from django.views.decorators.csrf import csrf_exempt
+from django.core.exceptions import ObjectDoesNotExist
 
 
 logger = logging.getLogger(__name__)
@@ -20,8 +23,27 @@ logger = logging.getLogger(__name__)
 def checkout(request):
     return redirect('order_success')
 
+def get_cart(request):
+    cart = request.session.get('cart', [])
+    return JsonResponse({'cart': cart})
+
+@login_required
 def order_success(request):
-    return render(request, 'order_success.html')
+    # Ambil order terakhir berdasarkan user yang sedang login
+    order = Order.objects.filter(user=request.user).latest('created_at')
+
+    # Ambil item dari order yang baru saja dibuat
+    order_items = order.items.all()
+
+    # Ambil saldo pengguna setelah transaksi
+    user_balance = request.user.profile.balance
+
+    # Mengirim data ke template
+    return render(request, 'order_success.html', {
+        'order': order,
+        'order_items': order_items,
+        'user_balance': user_balance
+    })
 
 def profile(request):
     return render(request, 'see_profil.html')
@@ -40,82 +62,170 @@ def home_page(request):
     })  # Pastikan Anda memiliki template 'home.html'
 
 @login_required
+def menu(request):
+    makanan_list = Makanan.objects.all().values('id', 'nama_menu', 'harga', 'gambar', 'stok', 'model')
+    for item in makanan_list:
+        item['model'] = 'makanan'
+
+    makanan2_list = Makanan2.objects.all().values('id', 'nama_category', 'harga', 'gambar', 'stok', 'category')
+    for item in makanan2_list:
+        item['model'] = 'makanan2'
+
+    # Gabungkan kedua queryset
+    combined_makanan_list = list(makanan_list)  # Menyimpan daftar makanan
+    combined_makanan2_list = list(makanan2_list)  # Menyimpan daftar makanan2
+
+    return render(request, "menu.html", {
+        "makanan_list": combined_makanan_list,
+        "makanan2_list": combined_makanan2_list,
+    })
+
+
+
+@login_required
 def checkout(request):
-    cart = request.session.get("cart", [])
+    # Validasi keberadaan profile
+    if not hasattr(request.user, 'profile'):
+        messages.error(request, "Silakan lengkapi profil Anda terlebih dahulu.")
+        return redirect('profile')
+
+    # Validasi keberadaan address
     try:
-        # Mengecek apakah pengguna memiliki alamat yang tersimpan
         address = Address.objects.get(user=request.user)
     except Address.DoesNotExist:
-        # Jika tidak ada alamat, arahkan pengguna ke halaman pengisian alamat
+        messages.error(request, "Alamat Anda belum lengkap. Silakan lengkapi alamat terlebih dahulu.")
         return redirect('address')
 
-    # Pastikan saldo cukup untuk menyelesaikan transaksi
-    user_balance = request.user.profile.balance
-    total_price = sum(item['price'] * item['quantity'] for item in cart)
-
     if request.method == 'POST':
-        if user_balance >= total_price:
-            # Kurangi saldo pengguna
-            request.user.profile.balance -= total_price
-            request.user.profile.save()
+        # Ambil data keranjang dari sesi
+        cart = request.session.get('cart', [])
+        total_price_str = request.POST.get('total_price')  # Total harga dari form
+        
+        # Validasi format total harga
+        total_price_str = total_price_str.replace("Rp.", "").replace(",", "").strip()
+        try:
+            total_price = Decimal(total_price_str)
+        except InvalidOperation:
+            messages.error(request, "Format total harga tidak valid.")
+            return redirect('checkout')
 
-            # Kosongkan keranjang belanja
-            request.session['cart'] = []
+        # Cek saldo pengguna
+        if request.user.profile.balance >= total_price:
+            try:
+                # Mulai transaksi untuk memastikan integritas data
+                with transaction.atomic():
+                    # Proses pembayaran dan pembaruan saldo
+                    request.user.profile.balance -= total_price
+                    request.user.profile.save()
 
-            # Redirect ke halaman sukses
-            return redirect('order_success')
+                    # Simpan riwayat transaksi
+                    TransactionHistory.objects.create(
+                        user=request.user,
+                        amount=total_price,
+                        status='Approved',
+                        description="Pembayaran untuk belanja"
+                    )
+
+                    # Buat Order
+                    new_order = Order.objects.create(
+                        user=request.user,
+                        status='Confirmed',  # Status diubah menjadi 'Confirmed' setelah pembayaran berhasil
+                        total_price=total_price,  # Menyimpan total harga order
+                    )
+
+                    insufficient_stock = []  # Menampung item dengan stok tidak cukup
+                    # Menambahkan item ke dalam OrderItem
+                    for item in cart:
+                        item_obj = Makanan if item['model'] == 'makanan' else Makanan2
+                        try:
+                            # Ambil item makanan berdasarkan model
+                            food = item_obj.objects.get(id=item['id'])
+                            
+                            # Cek stok makanan
+                            if food.stok < item['quantity']:
+                                insufficient_stock.append(f"Stok untuk {food.nama_menu} tidak mencukupi.")
+                                continue
+
+                            # Mengurangi stok makanan dan menyimpan perubahan
+                            food.stok -= item['quantity']
+                            food.save()
+
+                            # Menambahkan item pesanan ke OrderItem
+                            OrderItem.objects.create(
+                                order=new_order,
+                                makanan=food,
+                                quantity=item['quantity'],
+                                harga_total=food.harga * item['quantity']
+                            )
+
+                        except item_obj.DoesNotExist:
+                            insufficient_stock.append(f"Item dengan ID {item['id']} tidak ditemukan.")
+                            continue
+
+                    # Jika ada item dengan stok tidak cukup, tampilkan pesan error
+                    if insufficient_stock:
+                        messages.error(request, "Beberapa item dalam keranjang tidak dapat diproses: " + ", ".join(insufficient_stock))
+                        return redirect('checkout')
+
+                    # Bersihkan keranjang setelah pesanan dibuat
+                    request.session['cart'] = []
+
+                    messages.success(request, "Pesanan Anda berhasil diproses!")
+                    return redirect('order_success')
+
+            except Exception as e:
+                messages.error(request, "Terjadi kesalahan saat memproses pesanan. Silakan coba lagi.")
+                logger.error(f"Error processing order for user {request.user.id}: {str(e)}")
+                return redirect('checkout')
+
         else:
-            return render(request, 'checkout.html', {
-                'cart': cart,
-                'error_message': "Saldo tidak cukup. Silakan tambahkan saldo Anda."
-            })
+            # Saldo tidak mencukupi
+            messages.error(request, "Saldo Anda tidak mencukupi untuk melakukan pembayaran.")
+            return redirect('profile')
 
-    return render(request, "checkout.html", {"cart": cart, "user_balance": user_balance})
+    return render(request, 'checkout.html', {'address': address})
 
+def get_makanan_by_id(item):
+    """Fungsi pembantu untuk mendapatkan objek Makanan atau Makanan2."""
+    if item["model"] == "makanan":
+        return Makanan.objects.get(id=item["id"])
+    elif item["model"] == "makanan2":
+        return Makanan2.objects.get(id=item["id"])
+    else:
+        return None  # Model tidak valid
+    
 def address_view(request):
     return render(request, 'address.html')
 
-@login_required
+# Menambahkan item ke dalam keranjang
 def add_to_cart(request):
-    if request.method != "POST":
-        return JsonResponse({"success": False, "error": "Invalid method"}, status=405)
-    
-    try:
+    if request.method == "POST":
         data = json.loads(request.body)
-        cart = request.session.get("cart", [])
-        
-        new_item = {
-            "name": data.get("name"),
-            "price": float(data.get("price")),
-            "image": data.get("image"),
-            "quantity": 1
-        }
-        
-        # Check if item already exists
-        item_exists = False
-        for item in cart:
-            if item["name"] == new_item["name"]:
-                item["quantity"] += 1
-                item_exists = True
-                break
-                
-        if not item_exists:
-            cart.append(new_item)
-            
-        request.session["cart"] = cart
-        request.session.modified = True
-        
-        return JsonResponse({
-            "success": True,
-            "cart": cart,
-            "total_items": sum(item["quantity"] for item in cart)
-        })
-        
-    except json.JSONDecodeError:
-        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
-    except Exception as e:
-        return JsonResponse({"success": False, "error": str(e)}, status=500)
+        item_id = data.get('id')
+        item_name = data.get('name')
+        item_price = data.get('price')
+        item_image = data.get('image')
+        item_model = data.get('model')
 
+        # Mengambil keranjang dari sesi berdasarkan pengguna yang sedang login
+        cart = request.session.get('cart', {})
+
+        # Menambahkan item baru ke dalam keranjang
+        user_cart = cart.get(str(request.user.id), [])
+        user_cart.append({
+            'id': item_id,
+            'name': item_name,
+            'price': item_price,
+            'image': item_image,
+            'model': item_model
+        })
+
+        cart[str(request.user.id)] = user_cart
+        request.session['cart'] = cart  # Menyimpan kembali ke sesi
+
+        return JsonResponse({'success': True})
+
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
 
 
 def signup(request):
@@ -153,46 +263,40 @@ def signup(request):
 
 def user_login(request):
     if request.method == "POST":
-        # Mendapatkan data username dan password dari form POST
         username = request.POST.get('username')
         password = request.POST.get('password')
-        
-        # Mencoba untuk mengautentikasi pengguna
-        user = authenticate(request, username=username, password=password)
-        
-        if user is not None:
-            # Jika autentikasi berhasil, login pengguna
-            login(request, user)
 
-            # Log keberhasilan login
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            login(request, user)
             logger.info(f"User {username} berhasil login.")
             logger.info(f"Email: {user.email}, IP: {get_client_ip(request)}")
 
-            # Simpan riwayat login ke database
+            ip_address = get_client_ip(request)
+            logger.info(f"IP Address sebelum menyimpan: {ip_address}")
+
+            # Menyimpan riwayat login
             try:
-                LoginHistory.objects.create(
+                login_history = LoginHistory.objects.create(
                     user=user,
                     email=user.email,
                     login_time=now(),
-                    ip_address=get_client_ip(request)
+                    ip_address=ip_address
                 )
-                logger.info("Riwayat login berhasil disimpan.")
+                logger.info(f"Riwayat login berhasil disimpan: {login_history}")
             except Exception as e:
                 logger.error(f"Error saat menyimpan riwayat login: {str(e)}")
-
-            # Redirect pengguna ke halaman 'next' atau halaman home
-            next_url = request.GET.get('next', 'home')  # Jika tidak ada 'next', default ke 'home'
+            
+            next_url = request.GET.get('next', 'home')  # Default ke 'home'
             return redirect(next_url)
-
         else:
-            # Jika autentikasi gagal, log kegagalan login
             logger.warning(f"Login gagal untuk {username}.")
             messages.error(request, "Username atau password tidak valid.")
-            return redirect('login')  # Kembali ke halaman login untuk mencoba lagi
+            return redirect('login')
 
-    # Jika request menggunakan metode GET, tampilkan halaman login
-    return render(request, 'login.html')
-        
+    return render(request, 'signup.html')
+
 def logout_view(request):
     logout(request)
     return redirect('home')  # Alihkan ke homepage setelah logout
@@ -286,11 +390,14 @@ def address_view(request):
         return render(request, 'address.html', {'address': address})
     
 def get_client_ip(request):
+    # Ambil IP asli dari header X-Forwarded-For atau fallback ke REMOTE_ADDR
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
         ip = x_forwarded_for.split(',')[0]
     else:
         ip = request.META.get('REMOTE_ADDR')
+    
+    print(f"IP Address: {ip}")  # Debug log
     return ip
 
 def top_up_balance(request):

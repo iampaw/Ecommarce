@@ -16,7 +16,7 @@ from datetime import datetime
 from itertools import chain
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ObjectDoesNotExist
-
+from django.contrib.admin.views.decorators import staff_member_required
 
 logger = logging.getLogger(__name__)
 
@@ -28,26 +28,40 @@ def get_cart(request):
     return JsonResponse({'cart': cart})
 
 @login_required
+def order_status(request, order_id):
+    try:
+        order = Order.objects.get(id=order_id, user=request.user)
+        return JsonResponse({'status': order.status})
+    except Order.DoesNotExist:
+        return JsonResponse({'error': 'Order not found'}, status=404)
+    
+@staff_member_required
+def order_admin_detail(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    context = {
+        'order': order,
+        'title': f'Order #{order.id} Details',  # For admin template
+        'is_popup': False,  # For admin template
+        'has_permission': True,  # For admin template
+        'site_header': 'Administration',  # For admin template
+        'site_title': 'Site Admin',  # For admin template
+        'app_label': 'webku',
+    }
+    return render(request, 'admin/order_admin_detail.html', context)
+
+@login_required
 def order_success(request):
-    # Ambil order terakhir berdasarkan user yang sedang login
     order = Order.objects.filter(user=request.user).latest('created_at')
-
-    # Ambil item dari order yang baru saja dibuat
     order_items = order.items.all()
-
-    # Ambil saldo pengguna setelah transaksi
     user_balance = request.user.profile.balance
+    total_price_scaled = order.total_price / Decimal(100)
 
-    # Pastikan total_price dalam skala benar (contoh: database menyimpan 350000 untuk Rp 35.000,00)
-    # Jika harga sudah benar, lewati pembagian ini.
-    total_price_scaled = order.total_price / Decimal(100)  # Sesuaikan pembagian sesuai skala di database
-
-    # Kirim data ke template
     return render(request, 'order_success.html', {
         'order': order,
         'order_items': order_items,
-        'total_price_scaled': total_price_scaled,  # Harga yang disesuaikan untuk frontend
+        'total_price_scaled': total_price_scaled,
         'user_balance': user_balance,
+        'order_status': order.status,
     })
 
 def profile(request):
@@ -92,107 +106,95 @@ def menu(request):
         "makanan2_list": makanan2_list,
     })
 
+
 @login_required
 def checkout(request):
-    # Validasi keberadaan profile
     if not hasattr(request.user, 'profile'):
         messages.error(request, "Silakan lengkapi profil Anda terlebih dahulu.")
         return redirect('profile')
 
-    # Validasi keberadaan address
-    try:
-        address = Address.objects.get(user=request.user)
-    except Address.DoesNotExist:
-        messages.error(request, "Alamat Anda belum lengkap. Silakan lengkapi alamat terlebih dahulu.")
-        return redirect('address')
+    address = get_object_or_404(Address, user=request.user)
 
     if request.method == 'POST':
-        # Ambil data keranjang dari sesi
-        cart = request.session.get('cart', [])
-        total_price_str = request.POST.get('total_price')  # Total harga dari form
-        
-        # Validasi format total harga
-        # Ubah dari format IDR menjadi nilai numerik
-        total_price_str = total_price_str.replace("IDR", "").replace(",", "").replace(".", "")
-        total_price_str = total_price_str.strip()
+        cart = request.session.get('cart', {}).get(str(request.user.id), [])
+        total_price_str = request.POST.get('total_price', '').replace("IDR", "").replace(",", "").replace(".", "").strip()
 
         try:
-            total_price = Decimal(total_price_str)  # Ubah string menjadi Decimal
-
+            total_price = Decimal(total_price_str)
         except InvalidOperation:
             messages.error(request, "Format total harga tidak valid.")
             return redirect('checkout')
 
-        # Cek saldo pengguna
-        if request.user.profile.balance >= total_price:
-            try:
-                with transaction.atomic():
-                    # Proses pembayaran dan pembaruan saldo
-                    request.user.profile.balance -= total_price
-                    request.user.profile.save()
-
-                    # Simpan riwayat transaksi
-                    TransactionHistory.objects.create(
-                        user=request.user,
-                        amount=total_price,
-                        status='Approved',
-                        description="Pembayaran untuk belanja"
-                    )
-
-                    # Buat Order
-                    new_order = Order.objects.create(
-                        user=request.user,
-                        status='Confirmed',
-                        total_price=total_price,
-                    )
-
-                    insufficient_stock = []
-                    # Menambahkan item ke dalam OrderItem
-                    for item in cart:
-                        if 'model' in item:  # Memastikan ada key 'model' di item
-                            item_obj = Makanan if item['model'] == 'makanan' else Makanan2
-                        else:
-                            insufficient_stock.append(f"Format data item di keranjang tidak valid.")
-                            continue
-
-                        try:
-                            food = item_obj.objects.get(id=item['id'])
-                            
-                            if food.stok < item['quantity']:
-                                insufficient_stock.append(f"Stok untuk {food.nama_menu} tidak mencukupi.")
-                                continue
-
-                            food.stok -= item['quantity']
-                            food.save()
-
-                            OrderItem.objects.create(
-                                order=new_order,
-                                makanan=food,
-                                quantity=item['quantity'],
-                                harga_total=food.harga * item['quantity']
-                            )
-
-                        except item_obj.DoesNotExist:
-                            insufficient_stock.append(f"Item dengan ID {item['id']} tidak ditemukan.")
-                            continue
-
-                    if insufficient_stock:
-                        messages.error(request, "Beberapa item dalam keranjang tidak dapat diproses: " + ", ".join(insufficient_stock))
-                        return redirect('checkout')
-
-                    request.session['cart'] = []  # Kosongkan keranjang setelah transaksi sukses
-
-                    messages.success(request, "Pesanan Anda berhasil diproses!")
-                    return redirect('order_success')
-
-            except Exception as e:
-                messages.error(request, "Terjadi kesalahan saat memproses pesanan. Silakan coba lagi.")
-                logger.error(f"Error processing order for user {request.user.id}: {str(e)}")
-                return redirect('checkout')
-
-        else:
+        if request.user.profile.balance < total_price:
             messages.error(request, "Saldo Anda tidak mencukupi untuk melakukan pembayaran.")
             return redirect('profile')
+
+        try:
+            with transaction.atomic():
+                # Proses pembayaran
+                request.user.profile.balance -= total_price
+                request.user.profile.save()
+                TransactionHistory.objects.create(
+                    user=request.user,
+                    amount=total_price,
+                    status='Approved',
+                    description="Pembayaran untuk belanja"
+                )
+
+                # Buat Order
+                new_order = Order.objects.create(
+                    user=request.user,
+                    status='Confirmed',
+                    total_price=total_price,
+                )
+
+                insufficient_stock = []
+                for item in cart:
+                    if 'model' not in item:
+                        insufficient_stock.append("Format data item di keranjang tidak valid (model tidak ada).")
+                        continue
+
+                    if item['model'] == 'makanan':
+                        item_obj = Makanan
+                    elif item['model'] == 'makanan2':
+                        item_obj = Makanan2
+                    else:
+                        insufficient_stock.append(f"Model {item['model']} tidak valid.")
+                        continue
+
+                    try:
+                        food = item_obj.objects.select_for_update().get(id=item['id'])
+
+                        if food.stok < item['quantity']:
+                            insufficient_stock.append(f"Stok untuk {food.nama_menu} tidak mencukupi. Tersedia: {food.stok}, Dibeli: {item['quantity']}")
+                            continue
+
+                        # Kurangi stok
+                        food.stok -= item['quantity']
+                        food.save()
+
+                        OrderItem.objects.create(
+                            order=new_order,
+                            makanan=food,
+                            quantity=item['quantity'],
+                            harga_total=food.harga * item['quantity']
+                        )
+
+                    except item_obj.DoesNotExist:
+                        insufficient_stock.append(f"Item dengan ID {item['id']} tidak ditemukan.")
+                        continue
+
+                if insufficient_stock:
+                    messages.error(request, "Beberapa item dalam keranjang tidak dapat diproses: " + ", ".join(insufficient_stock))
+                    return redirect('checkout')
+
+                request.session['cart'] = {}
+                messages.success(request, "Pesanan Anda berhasil diproses!")
+                return redirect('order_success')
+
+        except Exception as e:
+            messages.error(request, "Terjadi kesalahan saat memproses pesanan. Silakan coba lagi.")
+            return redirect('checkout')
 
     return render(request, 'checkout.html', {'address': address})
 
@@ -204,10 +206,12 @@ def get_makanan_by_id(item):
         return Makanan2.objects.get(id=item["id"])
     else:
         return None  # Model tidak valid
-    
+
+
 def address_view(request):
     return render(request, 'address.html')
 
+@login_required
 def add_to_cart(request):
     if request.method == "POST":
         data = json.loads(request.body)
@@ -216,39 +220,72 @@ def add_to_cart(request):
         item_price = data.get('price')
         item_image = data.get('image')
         item_model = data.get('model')
+        item_quantity = data.get('quantity')
 
-        # Mengambil keranjang dari sesi berdasarkan pengguna yang sedang login
+        if not all([item_id, item_name, item_price, item_image, item_model, item_quantity]):
+            return JsonResponse({'success': False, 'error': 'Data tidak lengkap'})
+
+        try:
+            item_quantity = int(item_quantity)
+            if item_quantity <= 0:
+                return JsonResponse({'success': False, 'error': 'Jumlah item harus lebih dari 0'})
+        except ValueError:
+            return JsonResponse({'success': False, 'error': 'Jumlah item harus berupa angka'})
+
+        try:
+            with transaction.atomic():
+                if item_model == 'makanan':
+                    item_obj = Makanan
+                elif item_model == 'makanan2':
+                    item_obj = Makanan2
+                else:
+                    return JsonResponse({'success': False, 'error': 'Model tidak valid'})
+
+                food = item_obj.objects.select_for_update().get(id=item_id)
+
+                # Check stock
+                if food.stok <= 0:
+                    return JsonResponse({'success': False, 'error': 'Item sudah terjual habis.'})
+
+                # Check if item is already purchased by another user
+                if food.stok == 1 and TransactionHistory.objects.filter(makanan=food, status='Approved').exclude(user=request.user).exists():
+                    return JsonResponse({'success': False, 'error': 'Item ini sudah dibeli oleh pengguna lain.'})
+
+        except item_obj.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Item tidak ditemukan.'})
+
+        # Add item to cart
         cart = request.session.get('cart', {})
-
-        # Menambahkan item baru ke dalam keranjang
         user_cart = cart.get(str(request.user.id), [])
+
+        # Ensure cart is isolated per user
+        cart = request.session.get('cart', {})
+        if not isinstance(cart, dict):
+            cart = {}
+
+        user_cart = cart.get(str(request.user.id), [])
+
+        # Check if the item is already in the cart
+        existing_item = next((item for item in user_cart if item['id'] == item_id), None)
+        if existing_item:
+            return JsonResponse({'success': False, 'error': 'Item ini sudah ada di keranjang Anda.'})
+
         user_cart.append({
             'id': item_id,
             'name': item_name,
             'price': item_price,
             'image': item_image,
-            'model': item_model
+            'model': item_model,
+            'quantity': item_quantity,
         })
 
-        # Update keranjang di sesi
         cart[str(request.user.id)] = user_cart
-        request.session['cart'] = cart  # Menyimpan kembali ke sesi
-
-        # Mengurangi stok dari makanan yang dipilih
-        try:
-            makanan = Makanan2.objects.get(id=item_id)
-            if makanan.stok > 0:
-                makanan.stok -= 1  # Mengurangi stok
-                makanan.save()  # Menyimpan perubahan stok ke database
-            else:
-                return JsonResponse({'success': False, 'error': 'Out of stock'})
-
-        except Makanan2.DoesNotExist:
-            return JsonResponse({'success': False, 'error': 'Item not found'})
+        request.session['cart'] = cart  # Save back to session
 
         return JsonResponse({'success': True})
 
     return JsonResponse({'success': False, 'error': 'Invalid method'})
+
 
 def signup(request):
     if request.method == 'POST':
@@ -276,7 +313,7 @@ def signup(request):
             user = User.objects.create_user(username=username, email=email, password=password1)
             user.save()
             messages.success(request, "Account created successfully! Please log in.")
-            return redirect('signup')  # Kembali ke form login di halaman yang sama
+            return redirect('login')  # Mengarahkan ke halaman login setelah pendaftaran berhasil
         except Exception as e:
             messages.error(request, f"Error: {str(e)}")
             return redirect('signup')
@@ -291,24 +328,24 @@ def user_login(request):
 
         if user is not None:
             login(request, user)
-            ip_address = get_client_ip(request)
+            ip_address = get_client_ip(request)  # Pastikan fungsi ini ada dan mengembalikan IP pengguna
 
             # Log login action
             HistoryLog.objects.create(
                 user=user,
-                action='create',
+                action='login',  # Perbaiki 'create' menjadi 'login'
                 new_data={
                     'login_time': now().isoformat(),
                     'ip_address': ip_address,
                     'email': user.email
                 }
             )
-            return redirect(request.GET.get('next', 'home'))
+            return redirect(request.GET.get('next', 'home'))  # Redirect ke halaman yang dituju setelah login
 
         messages.error(request, "Username atau password tidak valid")
         return redirect('login')
 
-    return render(request, 'signup.html')
+    return render(request, 'login.html')  # Pastikan 'login.html' ada
 
 def logout_view(request):
     logout(request)
@@ -517,3 +554,53 @@ def update_balance(request):
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
     return JsonResponse({'success': False, 'error': 'Metode request tidak valid'})
+
+
+@staff_member_required
+def update_order_status(request, order_id):
+    if request.method == 'POST':
+        order = get_object_or_404(Order, id=order_id)
+        new_status = request.POST.get('status')
+        if new_status in ['pending', 'approved', 'rejected']:
+            order.status = new_status
+            order.save()
+            messages.success(request, f'Order #{order.id} status updated to {new_status}')
+        return redirect('admin:admin_order_detail', order_id=order_id)
+
+@staff_member_required
+def update_order_status(request, order_id):
+    if request.method == 'POST':
+        order = get_object_or_404(Order, id=order_id)
+        new_status = request.POST.get('status')
+        if new_status in ['pending', 'approved', 'rejected']:
+            order.status = new_status
+            order.save()
+            messages.success(request, f'Order #{order.id} status updated to {new_status}')
+        return redirect('admin_order_detail', order_id=order_id)  # Remove 'admin:'
+
+@staff_member_required
+def approve_order(request, order_id):
+    if request.method == 'POST':
+        order = get_object_or_404(Order, id=order_id)
+        order.status = 'approved'
+        order.save()
+        messages.success(request, f'Order #{order.id} has been approved')
+        return redirect('admin_order_detail', order_id=order_id)  # Remove 'admin:'
+
+@staff_member_required
+def reject_order(request, order_id):
+    if request.method == 'POST':
+        order = get_object_or_404(Order, id=order_id)
+        order.status = 'rejected'
+        order.save()
+        messages.success(request, f'Order #{order.id} has been rejected')
+        return redirect('admin_order_detail', order_id=order_id)  # Remove 'admin:'
+
+@staff_member_required
+def set_pending(request, order_id):
+    if request.method == 'POST':
+        order = get_object_or_404(Order, id=order_id)
+        order.status = 'pending'
+        order.save()
+        messages.success(request, f'Order #{order.id} has been set to pending')
+        return redirect('admin_order_detail', order_id=order_id)  # Remove 'admin:'

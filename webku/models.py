@@ -26,7 +26,6 @@ class Makanan2(models.Model):
         ('Cookies', 'Cookies'),
         ('Short Cake', 'Short Cake'),
     ])
-    model = models.CharField(max_length=100, default='')  # Add model field
 
     def __str__(self):
         return self.nama_category
@@ -130,19 +129,20 @@ class HistoryLog(models.Model):
         return f"{self.action} - {self.user.username} at {self.timestamp}"
     
 class Order(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('processing', 'Processing'),
+    ]
+    
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    status = models.CharField(max_length=20, choices=[
-        ('Pending', 'Pending'),
-        ('Confirmed', 'Confirmed'),
-        ('Shipped', 'Shipped'),
-        ('Delivered', 'Delivered'),
-        ('Cancelled', 'Cancelled')
-    ], default='Pending')  # Default status saat pesanan dibuat
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
-    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)  # Field total harga
 
     def __str__(self):
-        return f"Order #{self.id} - {self.user.username}"
+        return f"Order #{self.id} - {self.get_status_display()}"
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
@@ -151,17 +151,21 @@ class OrderItem(models.Model):
     harga_total = models.DecimalField(max_digits=10, decimal_places=2)
 
     def save(self, *args, **kwargs):
-        # Mulai transaksi untuk memastikan integritas data
         with transaction.atomic():
-            # Pastikan stok cukup sebelum melanjutkan
             if self.makanan.stok < self.quantity:
                 raise ValueError(f"Stok untuk {self.makanan.nama_menu} tidak cukup untuk quantity yang diminta.")
-
-            # Menghitung harga total berdasarkan harga makanan dan quantity
             self.harga_total = self.makanan.harga * self.quantity
-
-            # Kurangi stok makanan sesuai dengan jumlah yang dipesan
             self.makanan.stok -= self.quantity
-            self.makanan.save()  # Pastikan stok disimpan
-
+            self.makanan.save()
             super().save(*args, **kwargs)
+
+
+
+
+
+
+
+
+
+
+

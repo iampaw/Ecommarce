@@ -5,8 +5,10 @@ from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from .models import (
     Makanan, Makanan2, LoginHistory, Address, TransactionHistory, 
-    TopUpRequest, Profile
+    TopUpRequest, Profile, Order, OrderItem
 )
+from django.http import HttpResponseRedirect
+from django.urls import path
 
 # Pendaftaran Model
 @admin.register(Profile)
@@ -57,5 +59,46 @@ class CustomUserAdmin(admin.ModelAdmin):
     list_filter = ('is_active', 'is_staff')
     search_fields = ('username', 'email')
 
-admin.site.unregister(User)  # Unregister default User
-admin.site.register(User, CustomUserAdmin)
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    readonly_fields = ['makanan', 'quantity', 'harga_total']
+    can_delete = False
+    extra = 0
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'total_price', 'status', 'created_at']
+    list_filter = ['status']
+    search_fields = ['user__username']
+    inlines = [OrderItemInline]
+    readonly_fields = ['total_price', 'created_at']
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('<path:object_id>/approve/', self.admin_site.admin_view(self.approve_view), name='order_approve'),
+            path('<path:object_id>/reject/', self.admin_site.admin_view(self.reject_view), name='order_reject'),
+            path('<path:object_id>/pending/', self.admin_site.admin_view(self.pending_view), name='order_pending'),
+        ]
+        return custom_urls + urls
+
+    def approve_view(self, request, object_id):
+        order = self.get_object(request, object_id)
+        if order:
+            order.status = 'approved'
+            order.save()
+        return HttpResponseRedirect('../')
+
+    def reject_view(self, request, object_id):
+        order = self.get_object(request, object_id)
+        if order:
+            order.status = 'rejected'
+            order.save()
+        return HttpResponseRedirect('../')
+
+    def pending_view(self, request, object_id):
+        order = self.get_object(request, object_id)
+        if order:
+            order.status = 'pending'
+            order.save()
+        return HttpResponseRedirect('../')

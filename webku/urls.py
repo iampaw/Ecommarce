@@ -7,7 +7,6 @@ from django.contrib import admin
 from .views import check_profile_exists
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
     path('', views.home_page, name='home'),
     path('signup/', views.signup, name='signup'),
     path('logout/', views.logout_view, name='logout'),
@@ -25,9 +24,22 @@ urlpatterns = [
     path('order_success/', views.order_success, name='order_success'),
     path('add_to_cart/', views.add_to_cart, name='add_to_cart'),
     path('get_cart/', views.get_cart, name='get_cart'),
+    path('order_status/<int:order_id>/', views.order_status, name='order_status'),
+    path('admin/order/<int:order_id>/', views.order_admin_detail, name='admin_order_detail'),
+    path('admin/order/<int:order_id>/update_status/', views.update_order_status, name='order_status_update'),
+    path('admin/order/<int:order_id>/approve/', views.approve_order, name='order_approve'),
+    path('admin/order/<int:order_id>/reject/', views.reject_order, name='order_reject'),
+    path('admin/order/<int:order_id>/pending/', views.set_pending, name='order_pending'),
     
+
+    # Django admin URL setelah custom admin URLs
+    path('admin/', admin.site.urls),
     
-    
+    # URL patterns lainnya
+    path('', views.home_page, name='home'),
+    path('signup/', views.signup, name='signup'),
+
+
 
 ]
 

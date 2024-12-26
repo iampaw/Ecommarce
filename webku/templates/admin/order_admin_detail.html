@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce | RKS-312</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/order_admin.css' %}">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link href='https://fonts.googleapis.com/css?family=Kavoon' rel='stylesheet'>
+    <link href='https://fonts.googleapis.com/css?family=Karma' rel='stylesheet'>
+</head>
+<body>
+    <div class="order-detail-container">
+        <h1>Order #{{ order.id }} Details</h1>
+        <p><strong>Customer:</strong> {{ order.user.username }}</p>
+        <p><strong>Total Price:</strong> IDR {{ order.total_price|floatformat:2 }}</p>
+        <p><strong>Created At:</strong> {{ order.created_at }}</p>
+
+        <h2>Status: {{ order.get_status_display }}</h2>
+
+        <!-- Status Update Form -->
+        <form method="POST" action="{% url 'order_status_update' order.id %}">
+            {% csrf_token %}
+            <label for="status">Update Status:</label>
+            <select name="status" id="status" required>
+                <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="approved" {% if order.status == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if order.status == 'rejected' %}selected{% endif %}>Rejected</option>
+            </select>
+
+            <button type="submit" class="update-button">Update Status</button>
+        </form>
+
+        <div class="actions">
+            <form method="POST" action="{% url 'order_approve' order.id %}">
+                {% csrf_token %}
+                <button type="submit" class="approve-button">Approve</button>
+            </form>
+            <form method="POST" action="{% url 'order_reject' order.id %}">
+                {% csrf_token %}
+                <button type="submit" class="reject-button">Reject</button>
+            </form>
+            <form method="POST" action="{% url 'order_pending' order.id %}">
+                {% csrf_token %}
+                <button type="submit" class="pending-button">Set Pending</button>
+            </form>
+        </div>
+
+        <a href="{% url 'admin:webku_order_changelist' %}" class="back-to-orders">Back to Orders List</a>
+    </div>
+</body>
+</html>

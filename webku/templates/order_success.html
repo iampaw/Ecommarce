@@ -14,10 +14,11 @@
 <body>
     <div class="success-container">
         <div class="success-icon"></div>
-        <h2>payment successful!</h2>
-        <p>Your order is being processed</p>
         
-        <!-- If you want to keep the order details -->
+        <h2>{% if order.status == 'approved' %}Order Anda Sudah Diterima{% elif order.status == 'rejected' %}Pembayaran Ditolak{% else %}Pembayaran Sedang Diproses{% endif %}</h2>
+        
+        <p>Status Pesanan: <strong>{{ order.get_status_display }}</strong></p>
+        
         <div class="order-details">
             {% for item in order_items %}
                 <div>
@@ -30,9 +31,24 @@
         </div>
         
         <a href="{% url 'home' %}">Back To Home</a>
-    
+    </div>
 
-        <script>
+    <script>
+        setInterval(function() {
+            fetch("{% url 'order_status' order.id %}")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status == 'approved') {
+                        document.querySelector('.success-container h2').innerText = 'Order Anda Sudah Diterima';
+                    } else if (data.status == 'rejected') {
+                        document.querySelector('.success-container h2').innerText = 'Pembayaran Ditolak';
+                    } else {
+                        document.querySelector('.success-container h2').innerText = 'Pembayaran Sedang Diproses';
+                    }
+                });
+        }, 5000); // Cek setiap 5 detik
+    </script>
+    <script>
         document.querySelectorAll('.money').forEach(element => {
             const numberString = element.innerHTML.replace(/[^\d.-]/g, ''); // Hapus karakter non-angka
             const number = parseFloat(numberString); // Konversi ke angka

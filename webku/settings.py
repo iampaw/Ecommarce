@@ -93,15 +93,14 @@ LOGGING = {
     'disable_existing_loggers': False,
     'handlers': {
         'console': {
-            'level': 'DEBUG',  # Log dari level DEBUG dan lebih tinggi akan ditampilkan
+            'level': 'INFO',  # Ganti DEBUG ke INFO untuk mengurangi detail log
             'class': 'logging.StreamHandler',
         },
     },
     'loggers': {
-        'django': {
+        'django.db.backends': {
             'handlers': ['console'],
-            'level': 'DEBUG',  # Semua log dengan level DEBUG atau lebih tinggi akan ditampilkan
-            'propagate': True,
+            'level': 'INFO',  # Hanya log query yang penting
         },
     },
 }

@@ -124,7 +124,7 @@
         
         <script>
         document.querySelector('.checkout-btn').addEventListener('click', function (event) {
-            const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};  // Convert Django boolean to JS
+            const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }}  // Convert Django boolean to JS
             if (isAuthenticated) {
                 const cartItems = document.querySelectorAll('.cart-item'); // Adjust selector as needed
                 if (cartItems.length === 0) {
@@ -164,24 +164,26 @@
     </div>
   
     <!-- Bagian makanan -->
-    <div class="makanan-container">
-        {% for makanan in makanan_list %}
-            <div class="makanan" id="makanan-{{ forloop.counter }}">
-                <img src="{{ makanan.gambar.url }}" alt="{{ makanan.nama_menu }}">
-                <h1 class="makanan-name">{{ makanan.nama_menu }}</h1>
-                <p class="makanan-price">Rp {{ makanan.harga }}</p>
-                <button class="btn-add-to-cart" 
-                    data-id="{{ makanan.id }}" 
-                    data-name="{{ makanan.nama_menu }}" 
-                    data-price="{{ makanan.harga }}" 
-                    data-image="{{ makanan.gambar.url }}" 
-                    data-model="{{ makanan.model }}" 
-                    {% if makanan.stok == 0 %} disabled {% endif %}>
-                    Add to Cart
-                </button>
-            </div>
-        {% endfor %}
-    </div>
+<!-- Bagian makanan -->
+<div class="makanan-container">
+    {% for makanan in makanan_list %}
+        <div class="makanan" id="makanan-{{ forloop.counter }}">
+            <img src="{{ makanan.gambar.url }}" alt="{{ makanan.nama_menu }}">
+            <h1 class="makanan-name">{{ makanan.nama_menu }}</h1>
+            <p class="makanan-price">IDR {{ makanan.harga }}</p>
+            <button class="btn-add-to-cart" 
+                data-id="{{ makanan.id }}" 
+                data-name="{{ makanan.nama_menu }}" 
+                data-price="{{ makanan.harga }}" 
+                data-image="{{ makanan.gambar.url }}" 
+                data-model="{{ makanan.model }}" 
+                {% if makanan.stok == 0 %} disabled {% endif %}>
+                Add to Cart
+            </button>
+        </div>
+    {% endfor %}
+</div>
+
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -387,9 +389,9 @@
         function addToCart(event) {
             const button = event.target;
             const makananElement = button.closest(".makanan, .makanan2");
-            
+        
             const itemName = makananElement.querySelector(".makanan-name").textContent;
-            const itemPrice = parseFloat(makananElement.querySelector(".makanan-price").textContent.replace(/[^0-9.-]+/g, ""));
+            const itemPrice = parseFloat(makananElement.querySelector(".makanan-price").textContent.replace(/[^0-9,-]+/g, "").replace(",", "."));
             const itemImageSrc = makananElement.querySelector("img").src;
             const model = button.dataset.model;
         
@@ -418,65 +420,63 @@
             updateCartSidebar();
         }
         
-// Fungsi untuk memperbarui tampilan keranjang di sidebar
-function updateCartSidebar() {
-    const cart = JSON.parse(localStorage.getItem('cart')) || [];
-    const cartItemsContainer = document.querySelector(".cart-items");
-
-    // Clear konten sebelumnya
-    cartItemsContainer.innerHTML = '';
-
-    if (cart.length > 0) {
-        cart.forEach(item => {
-            const cartItem = document.createElement("div");
-            cartItem.classList.add("cart-item");
-            cartItem.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
-                    <img src="${item.image}" alt="${item.name}" width="50" height="50">
-                    <div style="flex-grow: 1;">
-                        <h4>${item.name}</h4>
-                        <p class="item-price">${new Intl.NumberFormat('id-ID', {
-                            style: 'currency',
-                            currency: 'IDR',
-                            minimumFractionDigits: 0
-                        }).format(item.price * item.quantity)}</p>
-                    </div>
-                    <div class="quantity-controls" style="display: flex; align-items: center; gap: 5px;">
-                        <button class="quantity-btn decrease-btn">-</button>
-                        <span class="quantity-display">${item.quantity}</span>
-                        <button class="quantity-btn increase-btn">+</button>
-                    </div>
-                </div>
-            `;
-            cartItemsContainer.appendChild(cartItem);
-
-            // Event listener untuk tombol mengurangi kuantitas
-            cartItem.querySelector('.decrease-btn').addEventListener('click', () => {
-                if (item.quantity > 1) {
-                    item.quantity -= 1; // Decrease quantity by 1
-                } else {
-                    // Jika quantity menjadi 0, hapus item dari cart
-                    const index = cart.indexOf(item);
-                    if (index > -1) {
-                        cart.splice(index, 1); // Remove the item from the cart array
-                    }
-                }
-
-                // Simpan perubahan ke localStorage
-                localStorage.setItem('cart', JSON.stringify(cart));
-                updateCartSidebar(); // Update the sidebar
-            });
-
-            // Event listener untuk tombol menambah kuantitas
-            cartItem.querySelector('.increase-btn').addEventListener('click', () => {
-                item.quantity += 1; // Increase quantity by 1
-                localStorage.setItem('cart', JSON.stringify(cart)); // Save to localStorage
-                updateCartSidebar(); // Update the sidebar
-            });
-        });
-    } else {
-    }
-}
+        // Fungsi untuk memperbarui tampilan keranjang di sidebar
+        function updateCartSidebar() {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            const cartItemsContainer = document.querySelector(".cart-items");
+        
+            // Clear konten sebelumnya
+            cartItemsContainer.innerHTML = '';
+        
+            if (cart.length > 0) {
+                cart.forEach(item => {
+                    const cartItem = document.createElement("div");
+                    cartItem.classList.add("cart-item");
+                    cartItem.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                            <img src="${item.image}" alt="${item.name}" width="50" height="50">
+                            <div style="flex-grow: 1;">
+                                <h4>${item.name}</h4>
+                                <p class="item-price">IDR ${new Intl.NumberFormat('id-ID', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                }).format(item.price * item.quantity)}</p>
+                            </div>
+                            <div class="quantity-controls" style="display: flex; align-items: center; gap: 5px;">
+                                <button class="quantity-btn decrease-btn">-</button>
+                                <span class="quantity-display">${item.quantity}</span>
+                                <button class="quantity-btn increase-btn">+</button>
+                            </div>
+                        </div>
+                    `;
+                    cartItemsContainer.appendChild(cartItem);
+        
+                    // Event listener untuk tombol mengurangi kuantitas
+                    cartItem.querySelector('.decrease-btn').addEventListener('click', () => {
+                        if (item.quantity > 1) {
+                            item.quantity -= 1; // Decrease quantity by 1
+                        } else {
+                            // Jika quantity menjadi 0, hapus item dari cart
+                            const index = cart.indexOf(item);
+                            if (index > -1) {
+                                cart.splice(index, 1); // Remove the item from the cart array
+                            }
+                        }
+        
+                        // Simpan perubahan ke localStorage
+                        localStorage.setItem('cart', JSON.stringify(cart));
+                        updateCartSidebar(); // Update the sidebar
+                    });
+        
+                    // Event listener untuk tombol menambah kuantitas
+                    cartItem.querySelector('.increase-btn').addEventListener('click', () => {
+                        item.quantity += 1; // Increase quantity by 1
+                        localStorage.setItem('cart', JSON.stringify(cart)); // Save to localStorage
+                        updateCartSidebar(); // Update the sidebar
+                    });
+                });
+            }
+        }
         
         // Fungsi untuk mendapatkan CSRF token
         function getCookie(name) {

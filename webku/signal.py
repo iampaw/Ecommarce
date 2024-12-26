@@ -10,3 +10,5 @@ def log_user_login(sender, request: HttpRequest, user, **kwargs):
 
     # Simpan informasi login ke dalam LoginHistory
     LoginHistory.objects.create(user=user, ip_address=ip_address)
+
+    

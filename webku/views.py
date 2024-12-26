@@ -81,7 +81,6 @@ def menu(request):
     })
 
 
-
 @login_required
 def checkout(request):
     # Validasi keberadaan profile
@@ -102,9 +101,20 @@ def checkout(request):
         total_price_str = request.POST.get('total_price')  # Total harga dari form
         
         # Validasi format total harga
-        total_price_str = total_price_str.replace("Rp.", "").replace(",", "").strip()
+        # Ubah dari format IDR menjadi nilai numerik
+        total_price_str = total_price_str.replace("IDR", "").replace(",", "")  # Hapus "IDR" dan koma ribuan
+        total_price_str = total_price_str.strip()  # Menghapus spasi yang tidak perlu
+
+        # Mengganti titik ribuan menjadi tidak ada, dan koma menjadi titik desimal
+        total_price_str = total_price_str.replace(".", "")  # Menghapus titik ribuan (jika ada)
+
         try:
+            # Mengonversi string menjadi Decimal
             total_price = Decimal(total_price_str)
+
+            # Pembagian harga untuk mengonversi dari format ribuan ke puluhan
+            total_price = total_price / 100  # Membagi dengan 100 untuk mendapatkan harga 35.00, bukan 3500.00
+
         except InvalidOperation:
             messages.error(request, "Format total harga tidak valid.")
             return redirect('checkout')
@@ -129,28 +139,24 @@ def checkout(request):
                     # Buat Order
                     new_order = Order.objects.create(
                         user=request.user,
-                        status='Confirmed',  # Status diubah menjadi 'Confirmed' setelah pembayaran berhasil
-                        total_price=total_price,  # Menyimpan total harga order
+                        status='Confirmed',
+                        total_price=total_price,
                     )
 
-                    insufficient_stock = []  # Menampung item dengan stok tidak cukup
+                    insufficient_stock = []
                     # Menambahkan item ke dalam OrderItem
                     for item in cart:
                         item_obj = Makanan if item['model'] == 'makanan' else Makanan2
                         try:
-                            # Ambil item makanan berdasarkan model
                             food = item_obj.objects.get(id=item['id'])
                             
-                            # Cek stok makanan
                             if food.stok < item['quantity']:
                                 insufficient_stock.append(f"Stok untuk {food.nama_menu} tidak mencukupi.")
                                 continue
 
-                            # Mengurangi stok makanan dan menyimpan perubahan
                             food.stok -= item['quantity']
                             food.save()
 
-                            # Menambahkan item pesanan ke OrderItem
                             OrderItem.objects.create(
                                 order=new_order,
                                 makanan=food,
@@ -162,12 +168,10 @@ def checkout(request):
                             insufficient_stock.append(f"Item dengan ID {item['id']} tidak ditemukan.")
                             continue
 
-                    # Jika ada item dengan stok tidak cukup, tampilkan pesan error
                     if insufficient_stock:
                         messages.error(request, "Beberapa item dalam keranjang tidak dapat diproses: " + ", ".join(insufficient_stock))
                         return redirect('checkout')
 
-                    # Bersihkan keranjang setelah pesanan dibuat
                     request.session['cart'] = []
 
                     messages.success(request, "Pesanan Anda berhasil diproses!")
@@ -179,7 +183,6 @@ def checkout(request):
                 return redirect('checkout')
 
         else:
-            # Saldo tidak mencukupi
             messages.error(request, "Saldo Anda tidak mencukupi untuk melakukan pembayaran.")
             return redirect('profile')
 
@@ -403,25 +406,25 @@ def get_client_ip(request):
 def top_up_balance(request):
     if not request.user.is_superuser:
         messages.error(request, "Anda tidak memiliki izin untuk mengakses halaman ini.")
-        return redirect('profile')  # Atau halaman lain yang sesuai
+        return redirect('profile')
     
     if request.method == 'POST':
         client_id = request.POST.get('client_id')
         nominal = request.POST.get('nominal')
 
         try:
-            user = User.objects.get(id=client_id)  # Mendapatkan user berdasarkan ID
-            user.profile.balance += int(nominal)  # Menambahkan saldo
-            user.profile.save()  # Menyimpan perubahan saldo
-            messages.success(request, f"Saldo untuk {user.username} berhasil di-top up sebesar {nominal} IDR.")
+            user = User.objects.get(id=client_id)
+            formatted_nominal = "IDR {:,.0f}".format(float(nominal)).replace(",", ".")
+            user.profile.balance += int(nominal)
+            user.profile.save()
+            messages.success(request, f"Saldo untuk {user.username} berhasil di-top up sebesar {formatted_nominal}")
         except User.DoesNotExist:
             messages.error(request, "User tidak ditemukan.")
         except ValueError:
             messages.error(request, "Nominal tidak valid.")
         
-        return redirect('top_up_balance')  # Redirect kembali ke halaman top-up
+        return redirect('top_up_balance')
 
-    # Mengambil semua user yang ada
     users = User.objects.all()
     return render(request, 'topup.html', {'users': users})
 
@@ -431,10 +434,10 @@ def request_top_up(request):
         
         try:
             amount = int(amount)
-            # Membuat record permintaan top-up
+            formatted_amount = "IDR {:,.0f}".format(float(amount)).replace(",", ".")
             top_up_request = TopUpRequest.objects.create(user=request.user, amount=amount)
-            messages.success(request, "Permintaan top-up berhasil diajukan.")
-            return redirect('profile')  # Kembali ke halaman profil pengguna
+            messages.success(request, f"Permintaan top-up {formatted_amount} berhasil diajukan.")
+            return redirect('profile')
         except ValueError:
             messages.error(request, "Jumlah yang dimasukkan tidak valid.")
         
@@ -451,42 +454,38 @@ def admin_top_up_requests(request):
 def approve_top_up(request, request_id):
     top_up_request = get_object_or_404(TopUpRequest, id=request_id)
 
-    # Perbarui status dan tambah saldo pengguna
     top_up_request.status = 'Sukses'
     top_up_request.save()
 
     user = top_up_request.user
     top_up_amount = Decimal(top_up_request.amount)
+    formatted_amount = "IDR {:,.0f}".format(float(top_up_amount)).replace(",", ".")
     user.profile.balance += top_up_amount
     user.profile.save()
 
-    # Simpan ke riwayat transaksi
     TransactionHistory.objects.create(
         user=user,
         amount=top_up_request.amount,
         status='Approved'
     )
 
-    # Hapus permintaan top-up setelah disetujui (opsional)
     top_up_request.delete()
 
-    messages.success(request, f"Top-up sebesar {top_up_amount} IDR disetujui untuk {user.username}.")
+    messages.success(request, f"Top-up sebesar {formatted_amount} disetujui untuk {user.username}.")
     return redirect('admin_top_up_requests')
 
 def reject_top_up(request, request_id):
     top_up_request = get_object_or_404(TopUpRequest, id=request_id)
+    formatted_amount = "IDR {:,.0f}".format(float(top_up_request.amount)).replace(",", ".")
 
-    # Simpan ke riwayat transaksi
     TransactionHistory.objects.create(
         user=top_up_request.user,
         amount=top_up_request.amount,
         status='Rejected'
     )
 
-    # Hapus permintaan top-up
+    messages.success(request, f"Permintaan top-up {formatted_amount} oleh {top_up_request.user.username} ditolak.")
     top_up_request.delete()
-
-    messages.success(request, f"Permintaan top-up oleh {top_up_request.user.username} ditolak.")
     return redirect('admin_top_up_requests')
 
 

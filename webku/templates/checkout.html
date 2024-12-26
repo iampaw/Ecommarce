@@ -33,7 +33,7 @@
     <div class="total"></div>
     <div class="total-price"></div>
     <div class="user-balance">
-      <p>Saldo Anda: Rp. <span id="user-balance">{{ user.profile.balance }}</span></p>
+      <p>Saldo Anda: IDR <span id="user-balance">{{ user.profile.balance }}</span></p>
     </div>
   </div>
 
@@ -48,118 +48,113 @@
   </div>
 </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-    const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
-    const cartItemsContainer = document.getElementById("cart-items");
-    const totalAmountElement = document.querySelector(".cart-footer .total-price");
-    const totalItemsElement = document.querySelector(".cart-footer .total");
-    const userBalanceElement = document.getElementById('user-balance');
-    const formatCurrency = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' });
-
-    // Fungsi untuk memperbarui tampilan keranjang
-    function updateCart() {
-      cartItemsContainer.innerHTML = ""; // Clear the cart
-      let totalAmount = 0;
-      let totalItems = 0;
-
-      // Menghitung total harga dan jumlah item yang dipilih
-      cartItems.forEach((item, index) => {
-        const itemTotal = item.price * item.quantity;
-        totalAmount += item.selected ? itemTotal : 0; // Hanya menambahkan total jika dipilih
-        totalItems += item.selected ? item.quantity : 0; // Hanya menghitung jumlah item yang dipilih
-
-        const itemDiv = document.createElement("div");
-        itemDiv.classList.add("cart-item");
-        itemDiv.innerHTML = `
-          <div><input type="checkbox" class="select-item" data-index="${index}" ${item.selected ? 'checked' : ''}/></div>
-          <div class="product-info">
-            <img src="${item.image}" alt="${item.name}" width="50"/>
-            <div>${item.name}</div>
-          </div>
-          <div>${formatCurrency.format(item.price)}</div> <!-- Format hanya dari JS -->
-          <div class="quantity-control">
-            <button class="decrease-quantity" data-index="${index}">-</button>
-            <input type="text" value="${item.quantity}" readonly/>
-            <button class="increase-quantity" data-index="${index}">+</button>
-          </div>
-          <div class="total-price">${formatCurrency.format(itemTotal)}</div> <!-- Format hanya dari JS -->
-        `;
-        cartItemsContainer.appendChild(itemDiv);
-      });
-
-      // Memperbarui total harga dan jumlah item di footer
-      totalAmountElement.innerText = formatCurrency.format(totalAmount); // Format total amount dengan JS
-      totalItemsElement.innerText = `Total (${totalItems} Items):`;
-
-      addEventListeners(); // Menambahkan event listener
-    }
-
-    // Fungsi untuk menambahkan event listeners pada elemen
-    function addEventListeners() {
-      document.querySelectorAll('.increase-quantity').forEach(button => {
-        button.addEventListener('click', function() {
-          const itemIndex = this.getAttribute('data-index');
-          cartItems[itemIndex].quantity += 1; // Menambah jumlah item
-          localStorage.setItem('cart', JSON.stringify(cartItems));
-          updateCart();
-        });
-      });
-
-      document.querySelectorAll('.decrease-quantity').forEach(button => {
-        button.addEventListener('click', function() {
-          const itemIndex = this.getAttribute('data-index');
-          if (cartItems[itemIndex].quantity > 1) {
-            cartItems[itemIndex].quantity -= 1; // Mengurangi jumlah item
-          } else {
-            cartItems.splice(itemIndex, 1); // Menghapus item jika jumlahnya 1
-          }
-          localStorage.setItem('cart', JSON.stringify(cartItems));
-          updateCart();
-        });
-      });
-
-      document.querySelectorAll('.select-item').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-          const itemIndex = this.getAttribute('data-index');
-          cartItems[itemIndex].selected = this.checked; // Menandai sebagai dipilih atau tidak
-          localStorage.setItem('cart', JSON.stringify(cartItems));
-          updateCart(); // Menghitung ulang total setelah perubahan seleksi
-        });
-      });
-    }
-
-    updateCart(); // Rendering keranjang pertama kali
-
-    // Menangani klik tombol checkout
-    document.getElementById('checkout-btn').addEventListener('click', function() {
-      // Periksa jika tidak ada item yang dipilih
-      const selectedItems = cartItems.filter(item => item.selected);  // Ambil item yang dipilih
-
-      if (selectedItems.length === 0) {
-        alert("Silakan pilih item terlebih dahulu sebelum melakukan checkout.");
-        return;  // Tidak melanjutkan checkout jika tidak ada item yang dipilih
-      }
-
-      const totalAmount = parseFloat(totalAmountElement.innerText.replace(/[^\d.-]/g, '')); // Mengonversi total harga ke angka
-      const userBalance = parseFloat(userBalanceElement.innerText.replace(/[^\d.-]/g, '')); // Mengonversi saldo pengguna ke angka
-
-      if (totalAmount > userBalance) {
-        alert("Saldo tidak cukup untuk checkout.");
-      } else {
-        // Mengisi data keranjang yang dipilih dan total harga ke input tersembunyi
-        document.getElementById('cart-data').value = JSON.stringify(selectedItems); // Hanya item yang dipilih
-        document.getElementById('total-price').value = totalAmount;
-
-        // Mengirimkan formulir untuk memproses checkout
-        document.getElementById('checkout-form').submit();
-      }
-    });
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+  const cartItemsContainer = document.getElementById("cart-items");
+  const totalAmountElement = document.querySelector(".cart-footer .total-price");
+  const totalItemsElement = document.querySelector(".cart-footer .total");
+  const userBalanceElement = document.getElementById('user-balance');
+  
+  // Format mata uang IDR menggunakan titik desimal
+  const formatCurrency = new Intl.NumberFormat('en-US', {  
+    style: 'decimal', // Ganti style menjadi 'decimal' tanpa simbol mata uang
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   });
-  </script>
 
+  function updateCart() {
+    cartItemsContainer.innerHTML = "";
+    let totalAmount = 0;
+    let totalItems = 0;
 
+    cartItems.forEach((item, index) => {
+      // Menghitung total harga untuk setiap item
+      const itemTotal = item.price * item.quantity;
+      totalAmount += item.selected ? itemTotal : 0;
+      totalItems += item.selected ? item.quantity : 0;
+
+      const itemDiv = document.createElement("div");
+      itemDiv.classList.add("cart-item");
+      itemDiv.innerHTML = `
+        <div><input type="checkbox" class="select-item" data-index="${index}" ${item.selected ? 'checked' : ''}/></div>
+        <div class="product-info">
+          <img src="${item.image}" alt="${item.name}" width="50"/>
+          <div>${item.name}</div>
+        </div>
+        <div>IDR ${formatCurrency.format(item.price)}</div>
+        <div class="quantity-control">
+          <button class="decrease-quantity" data-index="${index}">-</button>
+          <input type="text" value="${item.quantity}" readonly/>
+          <button class="increase-quantity" data-index="${index}">+</button>
+        </div>
+        <div class="total-price">IDR ${formatCurrency.format(itemTotal)}</div>
+      `;
+      cartItemsContainer.appendChild(itemDiv);
+    });
+
+    totalAmountElement.innerText = `IDR ${formatCurrency.format(totalAmount)}`;
+    totalItemsElement.innerText = `Total (${totalItems} Items):`;
+
+    addEventListeners();
+  }
+
+  function addEventListeners() {
+    document.querySelectorAll('.increase-quantity').forEach(button => {
+      button.addEventListener('click', function() {
+        const itemIndex = this.getAttribute('data-index');
+        cartItems[itemIndex].quantity += 1;
+        localStorage.setItem('cart', JSON.stringify(cartItems));
+        updateCart();
+      });
+    });
+
+    document.querySelectorAll('.decrease-quantity').forEach(button => {
+      button.addEventListener('click', function() {
+        const itemIndex = this.getAttribute('data-index');
+        if (cartItems[itemIndex].quantity > 1) {
+          cartItems[itemIndex].quantity -= 1;
+        } else {
+          cartItems.splice(itemIndex, 1);
+        }
+        localStorage.setItem('cart', JSON.stringify(cartItems));
+        updateCart();
+      });
+    });
+
+    document.querySelectorAll('.select-item').forEach(checkbox => {
+      checkbox.addEventListener('change', function() {
+        const itemIndex = this.getAttribute('data-index');
+        cartItems[itemIndex].selected = this.checked;
+        localStorage.setItem('cart', JSON.stringify(cartItems));
+        updateCart();
+      });
+    });
+  }
+
+  updateCart();
+
+  document.getElementById('checkout-btn').addEventListener('click', function() {
+    const selectedItems = cartItems.filter(item => item.selected);
+
+    if (selectedItems.length === 0) {
+      alert("Silakan pilih item terlebih dahulu sebelum melakukan checkout.");
+      return;
+    }
+
+    // Mengambil total harga yang diformat dengan benar
+    const totalAmount = parseFloat(totalAmountElement.innerText.replace(/[^\d.-]/g, ''));
+    const userBalance = parseFloat(userBalanceElement.innerText.replace(/[^\d.-]/g, ''));
+
+    if (totalAmount > userBalance) {
+      alert("Saldo tidak cukup untuk checkout.");
+    } else {
+      document.getElementById('cart-data').value = JSON.stringify(selectedItems);
+      document.getElementById('total-price').value = totalAmount;
+      document.getElementById('checkout-form').submit();
+    }
+  });
+});
 </script>
-
 </body> 
 </html>

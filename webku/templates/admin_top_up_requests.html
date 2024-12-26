@@ -26,7 +26,7 @@
             <tr>
                 <td>{{ forloop.counter }}</td>
                 <td>{{ request.user.username }}</td>
-                <td>Rp.{{ request.amount }}</td>
+                <td>IDR {{ request.amount|floatformat:0 }}</td>
                 <td>
                     {% if request.status == 'Pending' %}
                         <span class="status-pending">Pending</span>

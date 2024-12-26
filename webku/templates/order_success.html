@@ -13,23 +13,36 @@
 </head>
 <body>
     <div class="success-container">
-        <h1>Checkout Berhasil!</h1>
+        <h2>Checkout Berhasil!</h2>
         <p>Pesanan Anda sedang diproses.</p>
-
-        <!-- Menampilkan detail pesanan -->
-        <h2>Detail Pesanan:</h2>
-        <ul>
-            {% for item in order_items %}
-                <li>
-                    <strong>{{ item.makanan.nama_menu }}</strong> (x{{ item.quantity }}) - Rp {{ item.harga_total|floatformat:2 }}
-                </li>
-            {% endfor %}
-        </ul>
-
-        <p><strong>Total Harga: </strong> Rp {{ order.total_price|floatformat:2 }}</p>
-        <p><strong>Saldo Anda Sekarang: </strong> Rp {{ user_balance|floatformat:2 }}</p>
-
+        <h3>Detail Pesanan:</h3>
+        {% for item in order_items %}
+            <div>
+                <strong>{{ item.makanan.nama_menu }}</strong> (x{{ item.quantity }}) - 
+                <span class="money">{{ item.harga_total }}</span>
+            </div>
+        {% endfor %}
+        <p><strong>Total Harga: </strong><span class="money">{{ order.total_price }}</span></p>
+        
+        <p><strong>Saldo Anda Sekarang: </strong><span class="money">{{ user_balance }}</span></p>
         <a href="{% url 'home' %}">Kembali ke Home</a>
+
+        <script>
+            // Format semua elemen dengan class 'money' ke format IDR
+            document.querySelectorAll('.money').forEach(element => {
+                // Menghapus simbol mata uang atau karakter non-angka lainnya
+                const numberString = element.innerHTML.replace(/[^\d.-]/g, '');  // Menghapus karakter selain angka dan titik/desimal
+                const number = parseFloat(numberString);  // Mengonversi string menjadi angka
+        
+                // Format angka dengan Intl.NumberFormat untuk IDR
+                element.innerHTML = new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',   // Pastikan menggunakan IDR, bukan Rp
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(number);
+            });
+        </script>
     </div>
 </body>
 </html>

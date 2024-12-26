@@ -15,26 +15,24 @@
     <div class="container">
         <h1 class="title">Top up request</h1>
         <div class="form-card">
-
-
             <form method="post">
                 {% csrf_token %}
                 <div class="input-container">
                     <label class="input-label" for="amount">Masukkan Jumlah</label>
                     <input type="number" id="amount" name="amount" class="amount-input" min="0" step="1000">
                 </div>
-            
+                
                 <div class="amount-grid">
-                    <button type="button" class="amount-button">Rp.25.000</button>
-                    <button type="button" class="amount-button">Rp.50.000</button>
-                    <button type="button" class="amount-button">Rp.200.000</button>
-                    <button type="button" class="amount-button">Rp.500.000</button>
-                    <button type="button" class="amount-button">Rp.100.000</button>
-                    <button type="button" class="amount-button">Rp.150.000</button>
-                    <button type="button" class="amount-button">Rp.250.000</button>
-                    <button type="button" class="amount-button">Rp.1.000.000</button>
+                    <button type="button" class="amount-button">IDR 25.000</button>
+                    <button type="button" class="amount-button">IDR 50.000</button>
+                    <button type="button" class="amount-button">IDR 200.000</button>
+                    <button type="button" class="amount-button">IDR 500.000</button>
+                    <button type="button" class="amount-button">IDR 100.000</button>
+                    <button type="button" class="amount-button">IDR 150.000</button>
+                    <button type="button" class="amount-button">IDR 250.000</button>
+                    <button type="button" class="amount-button">IDR 1.000.000</button>
                 </div>
-            
+                
                 <div class="button-container">
                     <button type="button" class="button cancel-button">Cancel</button>
                     <button type="submit" class="button submit-button">Send Payment</button>
@@ -63,4 +61,3 @@
     </script>
 </body>
 </html>
-

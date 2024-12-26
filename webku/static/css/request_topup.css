@@ -147,3 +147,92 @@ body {
         font-size: 2rem;
     }
 }
+
+/* Initial animations */
+.title {
+    animation: fadeInDown 1s ease-out;
+}
+
+.form-card {
+    animation: fadeIn 1s ease-out;
+}
+
+.amount-button {
+    animation: fadeIn 0.5s ease-out backwards;
+}
+
+.amount-button:nth-child(1) { animation-delay: 0.1s; }
+.amount-button:nth-child(2) { animation-delay: 0.2s; }
+.amount-button:nth-child(3) { animation-delay: 0.3s; }
+.amount-button:nth-child(4) { animation-delay: 0.4s; }
+.amount-button:nth-child(5) { animation-delay: 0.5s; }
+.amount-button:nth-child(6) { animation-delay: 0.6s; }
+.amount-button:nth-child(7) { animation-delay: 0.7s; }
+.amount-button:nth-child(8) { animation-delay: 0.8s; }
+
+.button-container {
+    animation: fadeInUp 1s ease-out;
+}
+
+/* Hover animations */
+.input-container {
+    transition: transform 0.3s ease;
+}
+
+.input-container:hover {
+    transform: translateY(-5px);
+}
+
+.amount-button {
+    transition: all 0.3s ease;
+}
+
+.amount-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.amount-button.selected {
+    transform: scale(0.98);
+}
+
+.button {
+    transition: all 0.3s ease;
+}
+
+.button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.button:active {
+    transform: translateY(-1px);
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

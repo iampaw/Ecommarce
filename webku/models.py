@@ -25,8 +25,8 @@ class Makanan2(models.Model):
         ('Maccarone', 'Maccarone'),
         ('Cookies', 'Cookies'),
         ('Short Cake', 'Short Cake'),
-
     ])
+    model = models.CharField(max_length=100, default='')  # Add model field
 
     def __str__(self):
         return self.nama_category
@@ -51,7 +51,7 @@ class UserProfileAdmin(models.Model):
     is_active.boolean = True
 
 class LoginHistory(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='login_history')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     email = models.EmailField()
     login_time = models.DateTimeField(default=now)
     ip_address = models.GenericIPAddressField()

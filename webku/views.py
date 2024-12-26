@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
-from .models import Makanan, Makanan2, LoginHistory, Profile, Address, Client, TopUpRequest, TransactionHistory, OrderItem, Order, transaction
+from .models import Makanan, Makanan2, LoginHistory, Profile, Address, Client, TopUpRequest, TransactionHistory, OrderItem, Order, transaction, HistoryLog
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.models import User
 from django.utils.timezone import now
@@ -38,11 +38,16 @@ def order_success(request):
     # Ambil saldo pengguna setelah transaksi
     user_balance = request.user.profile.balance
 
-    # Mengirim data ke template
+    # Pastikan total_price dalam skala benar (contoh: database menyimpan 350000 untuk Rp 35.000,00)
+    # Jika harga sudah benar, lewati pembagian ini.
+    total_price_scaled = order.total_price / Decimal(100)  # Sesuaikan pembagian sesuai skala di database
+
+    # Kirim data ke template
     return render(request, 'order_success.html', {
         'order': order,
         'order_items': order_items,
-        'user_balance': user_balance
+        'total_price_scaled': total_price_scaled,  # Harga yang disesuaikan untuk frontend
+        'user_balance': user_balance,
     })
 
 def profile(request):
@@ -57,29 +62,35 @@ def check_profile_exists(request, username):
         return JsonResponse({'error': 'User not found'}, status=404)
 
 def home_page(request):
+    # Fetch all Makanan and Makanan2 objects
+    makanan_list = Makanan.objects.all()  # Fetch all Makanan objects
+    makanan2_list = Makanan2.objects.all()  # Fetch all Makanan2 objects
+    
+    # Return the rendered response with both lists
     return render(request, 'home.html', {
-        'user_authenticated': request.user.is_authenticated
-    })  # Pastikan Anda memiliki template 'home.html'
+        'makanan_list': makanan_list,
+        'makanan2_list': makanan2_list,
+        'user_authenticated': request.user.is_authenticated  # Checking if the user is authenticated
+    })
 
 @login_required
 def menu(request):
-    makanan_list = Makanan.objects.all().values('id', 'nama_menu', 'harga', 'gambar', 'stok', 'model')
+    # Ambil semua data Makanan dan Makanan2
+    makanan_list = Makanan.objects.all()
+    makanan2_list = Makanan2.objects.all()
+
+    # Tambahkan informasi 'model' ke setiap item
     for item in makanan_list:
-        item['model'] = 'makanan'
+        item.model = 'makanan'  # Menambahkan atribut 'model' ke objek
 
-    makanan2_list = Makanan2.objects.all().values('id', 'nama_category', 'harga', 'gambar', 'stok', 'category')
     for item in makanan2_list:
-        item['model'] = 'makanan2'
+        item.model = 'makanan2'  # Menambahkan atribut 'model' ke objek
 
-    # Gabungkan kedua queryset
-    combined_makanan_list = list(makanan_list)  # Menyimpan daftar makanan
-    combined_makanan2_list = list(makanan2_list)  # Menyimpan daftar makanan2
-
+    # Kirim data ke template
     return render(request, "menu.html", {
-        "makanan_list": combined_makanan_list,
-        "makanan2_list": combined_makanan2_list,
+        "makanan_list": makanan_list,
+        "makanan2_list": makanan2_list,
     })
-
 
 @login_required
 def checkout(request):
@@ -102,18 +113,11 @@ def checkout(request):
         
         # Validasi format total harga
         # Ubah dari format IDR menjadi nilai numerik
-        total_price_str = total_price_str.replace("IDR", "").replace(",", "")  # Hapus "IDR" dan koma ribuan
-        total_price_str = total_price_str.strip()  # Menghapus spasi yang tidak perlu
-
-        # Mengganti titik ribuan menjadi tidak ada, dan koma menjadi titik desimal
-        total_price_str = total_price_str.replace(".", "")  # Menghapus titik ribuan (jika ada)
+        total_price_str = total_price_str.replace("IDR", "").replace(",", "").replace(".", "")
+        total_price_str = total_price_str.strip()
 
         try:
-            # Mengonversi string menjadi Decimal
-            total_price = Decimal(total_price_str)
-
-            # Pembagian harga untuk mengonversi dari format ribuan ke puluhan
-            total_price = total_price / 100  # Membagi dengan 100 untuk mendapatkan harga 35.00, bukan 3500.00
+            total_price = Decimal(total_price_str)  # Ubah string menjadi Decimal
 
         except InvalidOperation:
             messages.error(request, "Format total harga tidak valid.")
@@ -122,7 +126,6 @@ def checkout(request):
         # Cek saldo pengguna
         if request.user.profile.balance >= total_price:
             try:
-                # Mulai transaksi untuk memastikan integritas data
                 with transaction.atomic():
                     # Proses pembayaran dan pembaruan saldo
                     request.user.profile.balance -= total_price
@@ -146,7 +149,12 @@ def checkout(request):
                     insufficient_stock = []
                     # Menambahkan item ke dalam OrderItem
                     for item in cart:
-                        item_obj = Makanan if item['model'] == 'makanan' else Makanan2
+                        if 'model' in item:  # Memastikan ada key 'model' di item
+                            item_obj = Makanan if item['model'] == 'makanan' else Makanan2
+                        else:
+                            insufficient_stock.append(f"Format data item di keranjang tidak valid.")
+                            continue
+
                         try:
                             food = item_obj.objects.get(id=item['id'])
                             
@@ -172,7 +180,7 @@ def checkout(request):
                         messages.error(request, "Beberapa item dalam keranjang tidak dapat diproses: " + ", ".join(insufficient_stock))
                         return redirect('checkout')
 
-                    request.session['cart'] = []
+                    request.session['cart'] = []  # Kosongkan keranjang setelah transaksi sukses
 
                     messages.success(request, "Pesanan Anda berhasil diproses!")
                     return redirect('order_success')
@@ -200,7 +208,6 @@ def get_makanan_by_id(item):
 def address_view(request):
     return render(request, 'address.html')
 
-# Menambahkan item ke dalam keranjang
 def add_to_cart(request):
     if request.method == "POST":
         data = json.loads(request.body)
@@ -223,13 +230,25 @@ def add_to_cart(request):
             'model': item_model
         })
 
+        # Update keranjang di sesi
         cart[str(request.user.id)] = user_cart
         request.session['cart'] = cart  # Menyimpan kembali ke sesi
+
+        # Mengurangi stok dari makanan yang dipilih
+        try:
+            makanan = Makanan2.objects.get(id=item_id)
+            if makanan.stok > 0:
+                makanan.stok -= 1  # Mengurangi stok
+                makanan.save()  # Menyimpan perubahan stok ke database
+            else:
+                return JsonResponse({'success': False, 'error': 'Out of stock'})
+
+        except Makanan2.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Item not found'})
 
         return JsonResponse({'success': True})
 
     return JsonResponse({'success': False, 'error': 'Invalid method'})
-
 
 def signup(request):
     if request.method == 'POST':
@@ -268,35 +287,26 @@ def user_login(request):
     if request.method == "POST":
         username = request.POST.get('username')
         password = request.POST.get('password')
-
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
             login(request, user)
-            logger.info(f"User {username} berhasil login.")
-            logger.info(f"Email: {user.email}, IP: {get_client_ip(request)}")
-
             ip_address = get_client_ip(request)
-            logger.info(f"IP Address sebelum menyimpan: {ip_address}")
 
-            # Menyimpan riwayat login
-            try:
-                login_history = LoginHistory.objects.create(
-                    user=user,
-                    email=user.email,
-                    login_time=now(),
-                    ip_address=ip_address
-                )
-                logger.info(f"Riwayat login berhasil disimpan: {login_history}")
-            except Exception as e:
-                logger.error(f"Error saat menyimpan riwayat login: {str(e)}")
-            
-            next_url = request.GET.get('next', 'home')  # Default ke 'home'
-            return redirect(next_url)
-        else:
-            logger.warning(f"Login gagal untuk {username}.")
-            messages.error(request, "Username atau password tidak valid.")
-            return redirect('login')
+            # Log login action
+            HistoryLog.objects.create(
+                user=user,
+                action='create',
+                new_data={
+                    'login_time': now().isoformat(),
+                    'ip_address': ip_address,
+                    'email': user.email
+                }
+            )
+            return redirect(request.GET.get('next', 'home'))
+
+        messages.error(request, "Username atau password tidak valid")
+        return redirect('login')
 
     return render(request, 'signup.html')
 

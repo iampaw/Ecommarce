@@ -371,7 +371,7 @@ html {
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* Menambahkan bayangan lebih besar */
 }
 
-.btn-add-to-card {
+.btn-add-to-cart {
     background-color: #0BB0C8;
     border: none;
     color: #000;
@@ -385,7 +385,7 @@ html {
     position: relative;
 }
 
-.btn-add-to-card:hover {
+.btn-add-to-cart:hover {
     background-color: #c0c0c0;
 }
 

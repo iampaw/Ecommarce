@@ -498,6 +498,18 @@
         
         // Update keranjang ketika halaman dimuat
         window.addEventListener('load', updateCartSidebar);
+
+        document.querySelectorAll('.btn-add-to-cart').forEach(button => {
+        button.addEventListener('click', function(e) {
+            const makananId = e.target.getAttribute('data-id');
+            const makananName = e.target.getAttribute('data-name');
+            const makananPrice = e.target.getAttribute('data-price');
+            const makananImage = e.target.getAttribute('data-image');
+
+            // Kirim data ini ke server atau update keranjang secara dinamis
+            // Misalnya: Tambahkan ke keranjang menggunakan AJAX atau update keranjang berbasis sesi
+        });
+    });
         </script>
 </div>
 </body>

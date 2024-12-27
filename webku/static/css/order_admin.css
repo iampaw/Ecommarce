@@ -1,219 +1,278 @@
-/* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Kavoon&family=Karma&display=swap');
-
-/* Basic Reset & Box-sizing */
-*,
-*::before,
-*::after {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
+/* General Styles */
 body {
-  font-family: 'Karma', sans-serif;
-  background-color: #f8f9fa;
-  color: #343a40;
-  line-height: 1.6;
-  padding: 20px;
+    font-family: 'Karma', sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .order-detail-container {
-  max-width: 800px;
-  margin: 20px auto;
-  background-color: #ffffff;
-  padding: 30px;
-  border-radius: 8px;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-  text-align: left;
-  opacity: 0; /* Initially hidden */
-  transform: translateY(20px); /* Start from below */
-  animation: fadeIn 0.6s ease forwards; /* Fade in animation */
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    max-width: 800px;
+    width: 90%;
+    animation: slideIn 0.5s ease-out;
 }
 
-@keyframes fadeIn {
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
+/* Header Styles */
 h1 {
-  font-family: 'Kavoon', cursive;
-  color: #2c3e50;
-  text-align: center;
-  margin-bottom: 20px;
-  opacity: 0; /* Initially hidden */
-  transform: translateY(-10px); /* Start from above */
-  animation: slideInDown 0.5s ease 0.2s forwards; /* Slide in animation */
-}
-
-@keyframes slideInDown {
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    font-family: 'Kavoon', cursive;
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    animation: fadeInDown 0.6s ease-out;
 }
 
 h2 {
-  margin-top: 20px;
-  margin-bottom: 10px;
-  color: #3498db;
-  font-weight: 600;
-    opacity: 0; /* Initially hidden */
-    transform: translateX(-10px); /* Start from the left */
-    animation: slideInLeft 0.5s ease 0.3s forwards; /* Slide in animation */
+    color: #34495e;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 0.5rem;
+    margin: 1.5rem 0;
+    animation: fadeIn 0.8s ease-out;
 }
 
-@keyframes slideInLeft {
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+/* Order Info Section */
+.order-info {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 2rem;
+    animation: fadeIn 0.8s ease-out;
 }
 
-p {
-  margin-bottom: 10px;
-  color: #555;
-  opacity: 0; /* Initially hidden */
-  animation: fadeInText 0.4s ease forwards;
-  animation-delay: calc(0.4s + var(--item-index) * 0.1s);
-
+/* Table Styles */
+.order-items {
+    margin: 2rem 0;
+    animation: fadeIn 0.8s ease-out;
 }
 
-@keyframes fadeInText {
-    to {
-        opacity: 1;
-    }
-}
-
-
-strong {
-  font-weight: bold;
-  color: #2c3e50;
-}
-
-/* Form Styling */
-form {
-    margin-top: 20px;
-    opacity: 0; /* Initially hidden */
-    animation: slideInUp 0.5s ease 0.4s forwards; /* Slide in animation */
-}
-
-@keyframes slideInUp {
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: bold;
-    color: #343a40;
-}
-
-select,
-input[type="text"] {
+table {
     width: 100%;
-    padding: 10px;
-    margin-bottom: 15px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
-    color: #495057;
-    background-color: #f8f9fa;
-    transition: border-color 0.2s ease-in-out;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
 }
 
-select:focus,
-input[type="text"]:focus {
+thead {
+    background: #34495e;
+    color: white;
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+th {
+    font-weight: 600;
+}
+
+tbody tr:hover {
+    background: #f5f8fa;
+}
+
+/* Form Styles */
+form {
+    margin: 1.5rem 0;
+}
+
+select {
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    margin: 0.5rem 0;
+    width: 200px;
+    transition: border-color 0.3s ease;
+}
+
+select:focus {
     border-color: #3498db;
     outline: none;
-    box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
 }
 
-/* Button Styling */
-.update-button,
-.approve-button,
-.reject-button,
-.pending-button {
-    background-color: #3498db;
-    color: white;
-    padding: 10px 15px;
+/* Button Styles */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin: 2rem 0;
+    animation: fadeInUp 0.8s ease-out;
+}
+
+button {
+    padding: 12px 24px;
     border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.1s ease;
-    margin-right: 10px;
+    border-radius: 8px;
     font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin: 0.5rem;
+    font-weight: 500;
 }
 
-.approve-button {
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.btn-success {
+    background-color: #2ecc71;
+    color: white;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.btn-warning {
+    background-color: #f1c40f;
+    color: white;
+}
+
+/* Messages Styles */
+.messages {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    animation: slideIn 0.5s ease-out;
+}
+
+.alert {
+    padding: 12px 20px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.alert-success {
     background-color: #2ecc71;
 }
 
-.reject-button {
+.alert-error {
     background-color: #e74c3c;
 }
 
-.pending-button {
-    background-color: #f39c12;
+.alert-warning {
+    background-color: #f1c40f;
 }
 
-.update-button:hover,
-.approve-button:hover,
-.reject-button:hover,
-.pending-button:hover {
-    filter: brightness(95%);
-    transform: scale(1.05);
+/* Back Button Style */
+.back-button {
+    display: inline-block;
+    padding: 10px 20px;
+    margin-top: 2rem;
+    color: #3498db;
+    text-decoration: none;
+    border: 2px solid #3498db;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    text-align: center;
 }
 
-/* Actions Container Styling */
-.actions {
-    display: flex;
-    margin-top: 20px;
-    justify-content: flex-start;
-    opacity: 0;
-    animation: fadeIn 0.5s ease 0.5s forwards;
-
+.back-button:hover {
+    background: #3498db;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
-/* Back to Order List Link */
-.back-to-orders {
-  display: block;
-  margin-top: 30px;
-  text-align: center;
-  color: #3498db;
-  text-decoration: none;
-  transition: color 0.3s ease;
-  opacity: 0;
-  animation: fadeIn 0.5s ease 0.6s forwards;
+/* Animations */
+@keyframes slideIn {
+    from {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
-.back-to-orders:hover {
-    color: #2c3e50;
-    text-decoration: underline;
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
-/* Responsive adjustments */
+@keyframes fadeInDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
     .order-detail-container {
-        padding: 20px;
-        margin: 10px;
+        padding: 1rem;
+        margin: 1rem;
     }
 
-    .actions {
-        flex-direction: column; /* Stack buttons on smaller screens */
+    .action-buttons {
+        flex-direction: column;
     }
 
-    .actions button {
-        margin-bottom: 10px;
-        margin-right: 0;
-    }
-    .update-button {
-        margin-bottom: 10px;
+    button {
+        width: 100%;
+        margin: 0.5rem 0;
     }
 
+    select {
+        width: 100%;
+    }
+
+    table {
+        display: block;
+        overflow-x: auto;
+    }
+
+    th, td {
+        min-width: 120px;
+    }
+}
+
+@media (max-width: 480px) {
+    .order-info {
+        padding: 1rem;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    .back-button {
+        width: 100%;
+    }
 }

@@ -53,11 +53,14 @@ class LoginHistory(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     email = models.EmailField()
     login_time = models.DateTimeField(default=now)
-    ip_address = models.GenericIPAddressField()
-
+    ip_address = models.GenericIPAddressField(null=True)  # tambahkan null=True untuk antisipasi jika IP tidak terdeteksi
+    
+    class Meta:
+        verbose_name_plural = "Login histories"  # untuk nama yang lebih baik di admin panel
+        ordering = ['-login_time']  # urutkan dari login terbaru
+    
     def __str__(self):
         return f"{self.user.username} logged in at {self.login_time}"
-    
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')

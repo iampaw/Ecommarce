@@ -14,41 +14,78 @@
 <body>
     <div class="order-detail-container">
         <h1>Order #{{ order.id }} Details</h1>
-        <p><strong>Customer:</strong> {{ order.user.username }}</p>
-        <p><strong>Total Price:</strong> IDR {{ order.total_price|floatformat:2 }}</p>
-        <p><strong>Created At:</strong> {{ order.created_at }}</p>
+        
+        <div class="order-info">
+            <p><strong>Customer:</strong> {{ order.user.username }}</p>
+            <p><strong>Total Price:</strong> IDR {{ order.total_price|floatformat:2 }}</p>
+            <p><strong>Created At:</strong> {{ order.created_at }}</p>
+            <p><strong>Current Status:</strong> {{ order.get_status_display }}</p>
+        </div>
 
-        <h2>Status: {{ order.get_status_display }}</h2>
+        <!-- Order Items Section -->
+        <div class="order-items">
+            <h2>Order Items</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items.all %}
+                    <tr>
+                        <td>{{ item.makanan.nama_menu }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>IDR {{ item.makanan.harga|floatformat:2 }}</td>
+                        <td>IDR {{ item.harga_total|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
         <!-- Status Update Form -->
-        <form method="POST" action="{% url 'order_status_update' order.id %}">
+        <form method="POST" action="{% url 'update_order_status' order.id %}">
             {% csrf_token %}
-            <label for="status">Update Status:</label>
-            <select name="status" id="status" required>
+            <select name="status" id="status">
                 <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Pending</option>
                 <option value="approved" {% if order.status == 'approved' %}selected{% endif %}>Approved</option>
                 <option value="rejected" {% if order.status == 'rejected' %}selected{% endif %}>Rejected</option>
             </select>
-
-            <button type="submit" class="update-button">Update Status</button>
+            <button type="submit">Update Status</button>
         </form>
 
-        <div class="actions">
-            <form method="POST" action="{% url 'order_approve' order.id %}">
+        <div class="action-buttons">
+            <form method="POST" action="{% url 'approve_order' order.id %}" style="display: inline;">
                 {% csrf_token %}
-                <button type="submit" class="approve-button">Approve</button>
+                <button type="submit" class="btn btn-success">Approve Order</button>
             </form>
-            <form method="POST" action="{% url 'order_reject' order.id %}">
+            
+            <form method="POST" action="{% url 'reject_order' order.id %}" style="display: inline;">
                 {% csrf_token %}
-                <button type="submit" class="reject-button">Reject</button>
+                <button type="submit" class="btn btn-danger">Reject Order</button>
             </form>
-            <form method="POST" action="{% url 'order_pending' order.id %}">
+            
+            <form method="POST" action="{% url 'set_pending' order.id %}" style="display: inline;">
                 {% csrf_token %}
-                <button type="submit" class="pending-button">Set Pending</button>
+                <button type="submit" class="btn btn-warning">Set Pending</button>
             </form>
         </div>
 
-        <a href="{% url 'admin:webku_order_changelist' %}" class="back-to-orders">Back to Orders List</a>
+        <a href="{% url 'admin:index' %}" class="back-button">Back to Admin</a>
     </div>
+
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 </body>
 </html>

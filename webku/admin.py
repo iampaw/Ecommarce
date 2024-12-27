@@ -26,8 +26,8 @@ class Makanan2Admin(admin.ModelAdmin):
 @admin.register(LoginHistory)
 class LoginHistoryAdmin(admin.ModelAdmin):
     list_display = ('user', 'email', 'login_time', 'ip_address')
-    search_fields = ('user__username', 'email')
-    list_filter = ('login_time',)
+    list_filter = ('user', 'login_time')
+    search_fields = ('user__username', 'email', 'ip_address')
 
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 {% load static %}
 <head>
     <meta charset="UTF-8">
@@ -15,7 +15,15 @@
     <div class="success-container">
         <div class="success-icon"></div>
         
-        <h2>{% if order.status == 'approved' %}Order Anda Sudah Diterima{% elif order.status == 'rejected' %}Pembayaran Ditolak{% else %}Pembayaran Sedang Diproses{% endif %}</h2>
+        <h2 id="order-status-text">
+            {% if order.status == 'approved' %}
+                Order Anda Sudah Diterima
+            {% elif order.status == 'rejected' %}
+                Pembayaran Ditolak
+            {% else %}
+                Pembayaran Sedang Diproses
+            {% endif %}
+        </h2>
         
         <p>Status Pesanan: <strong>{{ order.get_status_display }}</strong></p>
         
@@ -27,44 +35,69 @@
                 </div>
             {% endfor %}
             <p><strong>Total Harga: </strong><span class="money">{{ total_price_scaled }}</span></p>
-            <p><strong>Saldo Anda Sekarang: </strong><span class="money">{{ user_balance }}</span></p>
+            <p><strong>Saldo Anda Sekarang: </strong><span class="money" id="user-balance">{{ user_balance }}</span></p>
         </div>
         
-        <a href="{% url 'home' %}">Back To Home</a>
+        <a href="{% url 'home' %}">Kembali ke Beranda</a>
     </div>
 
+    <!-- Script untuk pengecekan status dan saldo secara dinamis -->
     <script>
+        // Fungsi untuk memeriksa status pesanan dan saldo pengguna secara berkala
         setInterval(function() {
             fetch("{% url 'order_status' order.id %}")
                 .then(response => response.json())
                 .then(data => {
+                    // Perbarui status pesanan berdasarkan data dari server
+                    const statusText = document.querySelector('#order-status-text');
                     if (data.status == 'approved') {
-                        document.querySelector('.success-container h2').innerText = 'Order Anda Sudah Diterima';
+                        statusText.innerText = 'Order Anda Sudah Diterima';
                     } else if (data.status == 'rejected') {
-                        document.querySelector('.success-container h2').innerText = 'Pembayaran Ditolak';
+                        statusText.innerText = 'Pembayaran Ditolak, Saldo Dikembalikan';
                     } else {
-                        document.querySelector('.success-container h2').innerText = 'Pembayaran Sedang Diproses';
+                        statusText.innerText = 'Pembayaran Sedang Diproses';
                     }
-                });
+
+                    // Perbarui saldo pengguna berdasarkan data dari server
+                    const balanceElement = document.querySelector('#user-balance');
+                    const userBalance = parseFloat(data.user_balance);  // Pastikan data saldo dikonversi menjadi angka
+
+                    if (!isNaN(userBalance)) {
+                        balanceElement.innerText = new Intl.NumberFormat('id-ID', {
+                            style: 'currency',
+                            currency: 'IDR'
+                        }).format(userBalance);
+                    } else {
+                        console.error("Saldo tidak valid:", data.user_balance);
+                        balanceElement.innerText = 'Saldo tidak valid'; // Tampilkan pesan jika saldo tidak valid
+                    }
+                })
+                .catch(error => console.error('Error fetching order status:', error));
         }, 5000); // Cek setiap 5 detik
     </script>
+
     <script>
         document.querySelectorAll('.money').forEach(element => {
-            const numberString = element.innerHTML.replace(/[^\d.-]/g, ''); // Hapus karakter non-angka
-            const number = parseFloat(numberString); // Konversi ke angka
+            const numberString = element.innerHTML.replace(/[^\d.-]/g, ''); // Menghapus karakter non-angka
+            const number = parseFloat(numberString); // Mengonversi ke angka
+
+            // Cek apakah angka valid
+            if (isNaN(number)) {
+                console.error("Format angka tidak valid: ", numberString);  // Cek apakah terjadi kesalahan
+                return;
+            }
 
             // Format angka dengan simbol kustom
             const formattedNumber = new Intl.NumberFormat('id-ID', {
                 style: 'currency',
                 currency: 'IDR',
-                minimumFractionDigits: 2,
+                minimumFractionDigits: 2,   
                 maximumFractionDigits: 2
             }).format(number);
 
             // Ganti "Rp" dengan "IDR"
             element.innerHTML = formattedNumber.replace('Rp', 'IDR');
         });
-        </script>
-    </div>
+    </script>
 </body>
 </html>

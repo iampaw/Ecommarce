@@ -10,38 +10,28 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
+        // Function to show profile popup
         function showProfilePopup() {
             const popup = document.getElementById('profile-popup');
             popup.classList.add('show');
             setTimeout(() => {
                 popup.classList.remove('show');
-            }, 3000);
+            }, 3000);  // Popup disappears after 3 seconds
         }
 
-        function checkProfileExists(username) {
-            $.ajax({
-                url: '/profile/' + username + '/',
-                type: 'GET',
-                success: function(data) {
-                    if (!data.profile_exists) {
-                        showProfilePopup();
-                    }
-                },
-                error: function() {
-                    alert("Terjadi kesalahan saat memeriksa profil.");
-                }
-            });
-        }
-
+        // Function to check if the profile exists and show popup only if not
         $(document).ready(function() {
-            var username = "{{ user.username }}";
-            checkProfileExists(username);
+            {% if not profile_exists %}
+                showProfilePopup();  // Only show the popup if the profile does not exist
+            {% endif %}
         });
 
+        // Function to handle profile picture change
         function changeProfilePic() {
             document.getElementById('file-input').click();
         }
 
+        // Function to update the profile picture
         function updateProfilePic(event) {
             const file = event.target.files[0];
             if (file) {

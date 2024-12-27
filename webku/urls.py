@@ -24,12 +24,20 @@ urlpatterns = [
     path('order_success/', views.order_success, name='order_success'),
     path('add_to_cart/', views.add_to_cart, name='add_to_cart'),
     path('get_cart/', views.get_cart, name='get_cart'),
-    path('order_status/<int:order_id>/', views.order_status, name='order_status'),
+    path('order_status/<int:order_id>/', views.get_order_status, name='order_status'),
     path('admin/order/<int:order_id>/', views.order_admin_detail, name='admin_order_detail'),
-    path('admin/order/<int:order_id>/update_status/', views.update_order_status, name='order_status_update'),
-    path('admin/order/<int:order_id>/approve/', views.approve_order, name='order_approve'),
-    path('admin/order/<int:order_id>/reject/', views.reject_order, name='order_reject'),
-    path('admin/order/<int:order_id>/pending/', views.set_pending, name='order_pending'),
+    path('admin/order/<int:order_id>/approve/', views.approve_order, name='approve_order'),
+    path('admin/order/<int:order_id>/reject/', views.reject_order, name='reject_order'),
+    path('admin/order/<int:order_id>/pending/', views.set_pending, name='set_pending'),
+    path('admin/order/<int:order_id>/status/', views.update_order_status, name='update_order_status'),
+    path('update_balance/', views.update_balance, name='update_balance'),
+
+
+    path('order/<int:order_id>/add-item/', views.add_order_item, name='add_order_item'),
+    path('order/<int:order_id>/remove-item/<int:item_id>/', views.remove_order_item, name='remove_order_item'),
+    path('order/<int:order_id>/update-item/<int:item_id>/', views.update_order_item_quantity, name='update_order_item_quantity'),
+    path('order/<int:order_id>/items/', views.list_order_items, name='list_order_items'),
+    path('order/<int:order_id>/item/<int:item_id>/', views.order_item_detail, name='order_item_detail'),
     
 
     # Django admin URL setelah custom admin URLs

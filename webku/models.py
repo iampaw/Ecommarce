@@ -149,20 +149,17 @@ class Order(models.Model):
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
-    makanan = models.ForeignKey(Makanan, on_delete=models.CASCADE)
+    makanan = models.ForeignKey('Makanan', on_delete=models.SET_NULL, null=True, blank=True)
+    makanan2 = models.ForeignKey('Makanan2', on_delete=models.SET_NULL, null=True, blank=True)
     quantity = models.PositiveIntegerField()
     harga_total = models.DecimalField(max_digits=10, decimal_places=2)
 
     def save(self, *args, **kwargs):
-        with transaction.atomic():
-            if self.makanan.stok < self.quantity:
-                raise ValueError(f"Stok untuk {self.makanan.nama_menu} tidak cukup untuk quantity yang diminta.")
+        if self.makanan:
             self.harga_total = self.makanan.harga * self.quantity
-            self.makanan.stok -= self.quantity
-            self.makanan.save()
-            super().save(*args, **kwargs)
-
-
+        elif self.makanan2:
+            self.harga_total = self.makanan2.harga * self.quantity
+        super().save(*args, **kwargs)
 
 
 

@@ -17,6 +17,7 @@ from itertools import chain
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.admin.views.decorators import staff_member_required
+from django.db import IntegrityError
 
 logger = logging.getLogger(__name__)
 
@@ -227,13 +228,12 @@ def checkout(request):
     return render(request, 'checkout.html', {'address': address})
 
 def get_makanan_by_id(item):
-    """Fungsi pembantu untuk mendapatkan objek Makanan atau Makanan2."""
-    if item["model"] == "makanan":
-        return Makanan.objects.get(id=item["id"])
-    elif item["model"] == "makanan2":
-        return Makanan2.objects.get(id=item["id"])
-    else:
-        return None  # Model tidak valid
+    """Helper function to get food item based on model type"""
+    try:
+        model_class = Makanan if item['model'] == 'makanan' else Makanan2
+        return model_class.objects.get(id=item['id'])
+    except (Makanan.DoesNotExist, Makanan2.DoesNotExist):
+        return None
 
 
 def address_view(request):
@@ -899,7 +899,8 @@ def list_order_items(request, order_id):
     """View to list all items in an order."""
     order = get_object_or_404(Order, id=order_id, user=request.user)
     items = order.items.all().select_related('makanan')  # Eager loading
-    
+    if not items.exists():
+        print(f"Order {order.id} does not have any items.")
     context = {
         'order': order,
         'items': items,
@@ -925,33 +926,38 @@ def order_item_detail(request, order_id, item_id):
 def create_order(user, total_price, cart_items):
     """Create a new order with pending status and its order items"""
     with transaction.atomic():
-        # Create new order with pending status
         new_order = Order.objects.create(
             user=user,
             status='pending',
-            total_price=total_price,
+            total_price=total_price
         )
         
-        # Deduct balance from user account if the order is pending
-        if user.profile.balance >= total_price:
-            user.profile.balance -= total_price
-            user.profile.save()
-        else:
+        if user.profile.balance < total_price:
             raise ValueError("Insufficient balance.")
+            
+        user.profile.balance -= total_price
+        user.profile.save()
         
-        # Process each cart item
         for item in cart_items:
-            makanan = get_makanan_by_id(item)
-            if makanan:
+            if item['model'] == 'makanan':
+                food_item = Makanan.objects.get(id=item['id'])
                 OrderItem.objects.create(
                     order=new_order,
-                    makanan=makanan,
+                    makanan=food_item,
                     quantity=item['quantity'],
-                    harga_total=Decimal(item['price']) * item['quantity']
+                    harga_total=Decimal(str(item['price'])) * Decimal(str(item['quantity']))
+                )
+            elif item['model'] == 'makanan2':
+                food_item = Makanan2.objects.get(id=item['id'])
+                OrderItem.objects.create(
+                    order=new_order,
+                    makanan2=food_item,
+                    quantity=item['quantity'],
+                    harga_total=Decimal(str(item['price'])) * Decimal(str(item['quantity']))
                 )
 
         return new_order
-    
+        
 
 def check_and_reduce_stock(item_id, model, quantity):
     """Check stock availability and reduce stock if sufficient"""
@@ -1002,3 +1008,37 @@ def get_order_status(request, order_id):
         'status': order.status,
         'user_balance': str(order.user.profile.balance)  # Pastikan saldo pengguna dikembalikan
     })
+
+# Fungsi untuk memproses item ketika order disetujui
+def approve_order_and_create_items(order, cart_items):
+    if order.status != 'approved':
+        order.status = 'approved'
+        order.save()
+
+    for item in cart_items:
+        makanan = get_makanan_by_id(item['makanan_id'])  # Ambil makanan dari database
+        if makanan:
+            # Pastikan item ditambahkan jika tidak ada sebelumnya
+            if not OrderItem.objects.filter(order=order, makanan=makanan).exists():
+                OrderItem.objects.create(
+                    order=order,
+                    makanan=makanan,
+                    quantity=item['quantity'],
+                    harga_total=Decimal(item['price']) * item['quantity']
+                )
+                print(f"OrderItem created for order {order.id} - Makanan: {makanan.nama_menu}")
+
+def save_order_and_items(order, cart_items):
+    try:
+        for item in cart_items:
+            makanan = get_makanan_by_id(item)
+            if makanan:
+                OrderItem.objects.create(
+                    order=order,
+                    makanan=makanan,
+                    quantity=item['quantity'],
+                    harga_total=Decimal(item['price']) * item['quantity']
+                )
+        order.save()
+    except IntegrityError as e:
+        print(f"Error saving order items: {e}")

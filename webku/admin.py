@@ -12,7 +12,7 @@ from django.urls import path
 
 # Pendaftaran Model
 @admin.register(Profile)
-class ProfileAdmin(admin.ModelAdmin):
+class ProfileAdmin(admin.ModelAdmin):   
     list_display = ('user', 'phone_number', 'gender', 'birth_date', 'balance')
 
 @admin.register(Makanan)
@@ -102,3 +102,9 @@ class OrderAdmin(admin.ModelAdmin):
             order.status = 'pending'
             order.save()
         return HttpResponseRedirect('../')
+    
+@admin.register(OrderItem)
+class OrderItemAdmin(admin.ModelAdmin):
+    list_display = ['order', 'makanan', 'quantity', 'harga_total']
+    list_filter = ['order']
+    search_fields = ['order__id', 'makanan__nama_menu']

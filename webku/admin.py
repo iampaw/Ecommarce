@@ -17,11 +17,27 @@ class ProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Makanan)
 class MakananAdmin(admin.ModelAdmin):
-    list_display = ('nama_menu', 'harga', 'stok')
+    list_display = ['nama_menu', 'harga', 'stok']
+    list_editable = ['stok']
+    search_fields = ['nama_menu']
+    list_filter = ['stok']
+    
+    def save_model(self, request, obj, form, change):
+        if obj.stok < 0:
+            obj.stok = 0
+        super().save_model(request, obj, form, change)
 
 @admin.register(Makanan2)
 class Makanan2Admin(admin.ModelAdmin):
-    list_display = ('nama_category', 'harga', 'stok')
+    list_display = ['nama_category', 'category', 'harga', 'stok']
+    list_editable = ['stok']
+    search_fields = ['nama_category']
+    list_filter = ['category', 'stok']
+    
+    def save_model(self, request, obj, form, change):
+        if obj.stok < 0:
+            obj.stok = 0
+        super().save_model(request, obj, form, change)
 
 @admin.register(LoginHistory)
 class LoginHistoryAdmin(admin.ModelAdmin):

@@ -11,9 +11,23 @@ class Makanan(models.Model):
     harga = models.DecimalField(max_digits=10, decimal_places=2)
     gambar = models.ImageField(upload_to='makanan_images/')
     stok = models.PositiveIntegerField(default=0)
-
+    
     def __str__(self):
         return self.nama_menu
+    
+    def kurangi_stok(self, jumlah):
+        """Mengurangi stok dengan jumlah tertentu secara aman"""
+        if self.stok >= jumlah:
+            self.stok -= jumlah
+            self.save()
+            return True
+        return False
+    
+    def tambah_stok(self, jumlah):
+        """Menambah stok dengan jumlah tertentu secara aman"""
+        self.stok += jumlah
+        self.save()
+        return True
 
 class Makanan2(models.Model):
     nama_category = models.CharField(max_length=100)
@@ -26,9 +40,23 @@ class Makanan2(models.Model):
         ('Cookies', 'Cookies'),
         ('Short Cake', 'Short Cake'),
     ])
-
+    
     def __str__(self):
         return self.nama_category
+    
+    def kurangi_stok(self, jumlah):
+        """Mengurangi stok dengan jumlah tertentu secara aman"""
+        if self.stok >= jumlah:
+            self.stok -= jumlah
+            self.save()
+            return True
+        return False
+    
+    def tambah_stok(self, jumlah):
+        """Menambah stok dengan jumlah tertentu secara aman"""
+        self.stok += jumlah
+        self.save()
+        return True
 
 class UserProfileAdmin(models.Model):
     list_display = ('user', 'full_name', 'user_email', 'last_login', 'is_active')

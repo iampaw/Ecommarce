@@ -5,6 +5,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from .views import check_profile_exists
+from .views import kurangi_stok
+
 
 urlpatterns = [
     path('', views.home_page, name='home'),
@@ -31,7 +33,7 @@ urlpatterns = [
     path('admin/order/<int:order_id>/pending/', views.set_pending, name='set_pending'),
     path('admin/order/<int:order_id>/status/', views.update_order_status, name='update_order_status'),
     path('update_balance/', views.update_balance, name='update_balance'),
-
+    path('kurangi-stok/', kurangi_stok, name='kurangi_stok'),
 
     path('order/<int:order_id>/add-item/', views.add_order_item, name='add_order_item'),
     path('order/<int:order_id>/remove-item/<int:item_id>/', views.remove_order_item, name='remove_order_item'),

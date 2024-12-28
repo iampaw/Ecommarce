@@ -18,6 +18,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db import IntegrityError
+from django.contrib.auth.signals import user_logged_in
+from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
 
@@ -240,6 +242,7 @@ def address_view(request):
     return render(request, 'address.html')
 
 @login_required
+@csrf_exempt
 def add_to_cart(request):
     if request.method == "POST":
         data = json.loads(request.body)
@@ -253,22 +256,30 @@ def add_to_cart(request):
         if not all([item_id, item_name, item_price, item_image, item_model, item_quantity]):
             return JsonResponse({'success': False, 'error': 'Data tidak lengkap'})
 
-        # Pastikan cart disimpan sebagai dictionary dengan user ID sebagai key
-        cart = request.session.get('cart', {})
-        
-        # Konversi cart ke dictionary jika bukan dictionary
-        if not isinstance(cart, dict):
-            cart = {}
+        # Ambil model terkait
+        model = Makanan if item_model == 'makanan' else Makanan2
+
+        try:
+            item = model.objects.get(id=item_id)
+            if item.stok < item_quantity:
+                return JsonResponse({'success': False, 'error': 'Stok tidak mencukupi'})
             
-        # Ambil keranjang spesifik untuk user ini
+            # Kurangi stok
+            item.kurangi_stok(item_quantity)
+
+        except model.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Item tidak ditemukan'})
+
+        # Simpan keranjang di session
+        cart = request.session.get('cart', {})
         user_cart = cart.get(str(request.user.id), [])
         
-        # Cek item duplikat dalam keranjang user ini
-        item_exists = any(item['id'] == item_id for item in user_cart)
-        if item_exists:
-            return JsonResponse({'success': False, 'error': 'Item sudah ada di keranjang'})
+        # Cek apakah item sudah ada di keranjang
+        for user_item in user_cart:
+            if user_item['id'] == item_id:
+                return JsonResponse({'success': False, 'error': 'Item sudah ada di keranjang'})
         
-        # Tambahkan item baru ke keranjang user
+        # Tambahkan item ke keranjang
         user_cart.append({
             'id': item_id,
             'name': item_name,
@@ -277,15 +288,12 @@ def add_to_cart(request):
             'model': item_model,
             'quantity': item_quantity
         })
-        
-        # Update keranjang user di session
         cart[str(request.user.id)] = user_cart
         request.session['cart'] = cart
         request.session.modified = True  # Pastikan session disimpan
 
-        return JsonResponse({'success': True})
-
-    return JsonResponse({'success': False, 'error': 'Invalid method'})
+        return JsonResponse({'success': True, 'message': 'Item berhasil ditambahkan ke keranjang'})
+    return JsonResponse({'success': False, 'error': 'Metode tidak valid'})
 
 def get_user_cart(request):
     """Helper function untuk mengambil keranjang spesifik user"""
@@ -637,11 +645,23 @@ def approve_order(request, order_id):
                     messages.error(request, f'Order #{order.id} cannot be approved - invalid status')
                     return redirect('admin_order_detail', order_id=order_id)
 
-                # Update order status
+                # Check stock availability before approving the order
+                for item in order.items.all():
+                    product = item.product  # Assuming you have a `product` field in OrderItem
+                    if product.stock < item.quantity:
+                        # If stock is insufficient, return an error message
+                        messages.error(request, f"Insufficient stock for {product.name}. Only {product.stock} left.")
+                        return redirect('admin_order_detail', order_id=order_id)
+
+                    # Deduct the stock for each item in the order
+                    product.stock -= item.quantity
+                    product.save()
+
+                # Update the order status to approved
                 order.status = 'approved'
                 order.save()
 
-                # Create transaction history entry
+                # Create transaction history entry for the approval
                 TransactionHistory.objects.create(
                     user=order.user,
                     amount=order.total_price,
@@ -649,37 +669,23 @@ def approve_order(request, order_id):
                     description=f"Order #{order.id} approved"
                 )
 
-                # Record the items in OrderItem table
+                # Record the items in OrderItem table (if not already done)
                 cart = request.session.get('cart', {}).get(str(order.user.id), [])
-                
                 for item in cart:
-                    # Get the correct model based on item type
-                    if item['model'] == 'makanan':
-                        food_model = Makanan
-                    elif item['model'] == 'makanan2':
-                        food_model = Makanan2
-                    else:
-                        continue
-
+                    food_model = Makanan if item['model'] == 'makanan' else Makanan2
+                    
                     try:
                         food = food_model.objects.get(id=item['id'])
-                        
-                        # Create OrderItem
                         OrderItem.objects.create(
                             order=order,
                             makanan=food,
                             quantity=item['quantity'],
                             harga_total=food.harga * item['quantity']
                         )
-
-                        # Update stock
-                        food.stok -= item['quantity']
-                        food.save()
-
                     except food_model.DoesNotExist:
                         messages.warning(request, f"Item {item['name']} not found in database")
                         continue
-
+                
                 # Clear the user's cart after successful order
                 if str(order.user.id) in request.session.get('cart', {}):
                     cart = request.session['cart']
@@ -1042,3 +1048,92 @@ def save_order_and_items(order, cart_items):
         order.save()
     except IntegrityError as e:
         print(f"Error saving order items: {e}")
+
+def update_stok_setelah_pesanan(item_pesanan):
+    """
+    Memperbarui level stok setelah konfirmasi pesanan
+    Mengembalikan True jika berhasil, False jika stok tidak mencukupi
+    """
+    with transaction.atomic():
+        for item in item_pesanan:
+            makanan = item.get('makanan') or item.get('makanan2')
+            if not makanan:
+                continue
+
+            if not makanan.kurangi_stok(item['quantity']):
+                # Rollback akan terjadi secara otomatis
+                return False
+    return True
+
+def cek_ketersediaan_stok(item_keranjang):
+    """
+    Memeriksa apakah semua item di keranjang memiliki stok yang cukup
+    Mengembalikan tuple (bool, daftar item yang tidak tersedia)
+    """
+    item_tidak_tersedia = []
+    
+    for item in item_keranjang:
+        model = Makanan if item['model'] == 'makanan' else Makanan2
+        try:
+            produk = model.objects.get(id=item['id'])
+            if produk.stok < item['quantity']:
+                item_tidak_tersedia.append({
+                    'nama': produk.nama_menu if hasattr(produk, 'nama_menu') else produk.nama_category,
+                    'tersedia': produk.stok,
+                    'diminta': item['quantity']
+                })
+        except model.DoesNotExist:
+            item_tidak_tersedia.append({
+                'nama': item['name'],
+                'error': 'Produk tidak ditemukan'
+            })
+    
+    return (len(item_tidak_tersedia) == 0, item_tidak_tersedia)
+
+def tambah_stok_item(data_item):
+    """
+    Menambah stok item dengan jumlah baru
+    data_item: list dari dict dengan kunci 'id', 'model', dan 'quantity'
+    """
+    with transaction.atomic():
+        for item in data_item:
+            model = Makanan if item['model'] == 'makanan' else Makanan2
+            try:
+                produk = model.objects.get(id=item['id'])
+                if item['quantity'] > 0:
+                    produk.tambah_stok(item['quantity'])
+            except model.DoesNotExist:
+                continue
+
+def kurangi_stok(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        item_id = data.get('id')
+        model_name = data.get('model')
+        jumlah = data.get('jumlah')
+        is_increment = data.get('is_increment')
+
+        # Get the object based on the model
+        if model_name == 'makanan2':
+            item = Makanan2.objects.get(id=item_id)
+        else:
+            item = Makanan.objects.get(id=item_id)
+
+        if not is_increment and item.stok >= jumlah:  # Decrease stock
+            item.stok -= jumlah
+            item.save()
+            return JsonResponse({"success": True})
+
+        if is_increment:  # Increase stock
+            item.stok += jumlah
+            item.save()
+            return JsonResponse({"success": True})
+
+        return JsonResponse({"success": False, "error": "Not enough stock"})
+    return JsonResponse({"success": False, "error": "Invalid request"})
+
+@receiver(user_logged_in)
+def save_login_history(sender, request, user, **kwargs):
+    # Create a new LoginHistory object when the user logs in
+    ip_address = request.META.get('REMOTE_ADDR')  # Get the IP address from the request
+    LoginHistory.objects.create(user=user, email=user.email, login_time=now(), ip_address=ip_address)

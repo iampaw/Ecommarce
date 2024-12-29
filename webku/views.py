@@ -20,14 +20,23 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.db import IntegrityError
 from django.contrib.auth.signals import user_logged_in
 from django.dispatch import receiver
+from django.http import HttpResponseForbidden
+from django.contrib.auth.decorators import user_passes_test
+
 
 logger = logging.getLogger(__name__)
 
-def checkout(request):
-    return redirect('order_success')
 
+def superuser_required(function):
+    def check_superuser(user):
+        return user.is_superuser
+    decorated_view = user_passes_test(check_superuser, login_url='login')(function)
+    return decorated_view
+
+@login_required
 def get_cart(request):
-    cart = request.session.get('cart', [])
+    """Get cart contents for authenticated user only"""
+    cart = request.session.get('cart', {}).get(str(request.user.id), [])
     return JsonResponse({'cart': cart})
 
 @login_required
@@ -172,6 +181,7 @@ def home_page(request):
         'user_authenticated': request.user.is_authenticated  # Checking if the user is authenticated
     })
 
+
 @login_required
 def menu(request):
     # Ambil semua data Makanan dan Makanan2
@@ -244,42 +254,48 @@ def address_view(request):
 @login_required
 @csrf_exempt
 def add_to_cart(request):
-    if request.method == "POST":
+    if request.method != "POST":
+        return JsonResponse({'success': False, 'error': 'Invalid method'})
+    
+    try:
         data = json.loads(request.body)
         item_id = data.get('id')
         item_name = data.get('name')
         item_price = data.get('price')
         item_image = data.get('image')
         item_model = data.get('model')
-        item_quantity = data.get('quantity')
-
-        if not all([item_id, item_name, item_price, item_image, item_model, item_quantity]):
-            return JsonResponse({'success': False, 'error': 'Data tidak lengkap'})
-
-        # Ambil model terkait
+        item_quantity = data.get('quantity', 1)
+        
+        if not all([item_id, item_name, item_price, item_image, item_model]):
+            return JsonResponse({'success': False, 'error': 'Incomplete data'})
+        
+        # Get the appropriate model
         model = Makanan if item_model == 'makanan' else Makanan2
-
+        
         try:
             item = model.objects.get(id=item_id)
+            # Hanya cek stok tersedia, tapi tidak menguranginya
             if item.stok < item_quantity:
-                return JsonResponse({'success': False, 'error': 'Stok tidak mencukupi'})
+                return JsonResponse({'success': False, 'error': 'Insufficient stock'})
             
-            # Kurangi stok
-            item.kurangi_stok(item_quantity)
-
         except model.DoesNotExist:
-            return JsonResponse({'success': False, 'error': 'Item tidak ditemukan'})
-
-        # Simpan keranjang di session
-        cart = request.session.get('cart', {})
-        user_cart = cart.get(str(request.user.id), [])
+            return JsonResponse({'success': False, 'error': 'Item not found'})
         
-        # Cek apakah item sudah ada di keranjang
-        for user_item in user_cart:
-            if user_item['id'] == item_id:
-                return JsonResponse({'success': False, 'error': 'Item sudah ada di keranjang'})
+        # Initialize cart structure if it doesn't exist
+        if 'cart' not in request.session:
+            request.session['cart'] = {}
+            
+        user_id = str(request.user.id)
+        if user_id not in request.session['cart']:
+            request.session['cart'][user_id] = []
+            
+        # Check if item already exists in cart
+        user_cart = request.session['cart'][user_id]
+        for cart_item in user_cart:
+            if cart_item['id'] == item_id and cart_item['model'] == item_model:
+                return JsonResponse({'success': False, 'error': 'Item already in cart'})
         
-        # Tambahkan item ke keranjang
+        # Add item to cart
         user_cart.append({
             'id': item_id,
             'name': item_name,
@@ -288,12 +304,20 @@ def add_to_cart(request):
             'model': item_model,
             'quantity': item_quantity
         })
-        cart[str(request.user.id)] = user_cart
-        request.session['cart'] = cart
-        request.session.modified = True  # Pastikan session disimpan
-
-        return JsonResponse({'success': True, 'message': 'Item berhasil ditambahkan ke keranjang'})
-    return JsonResponse({'success': False, 'error': 'Metode tidak valid'})
+            
+        request.session['cart'][user_id] = user_cart
+        request.session.modified = True
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Item added to cart successfully',
+            'cart_count': len(user_cart)
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON data'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
 def get_user_cart(request):
     """Helper function untuk mengambil keranjang spesifik user"""
@@ -417,8 +441,8 @@ def profile_view(request, username):
                     profile.user = user  # Set the user who owns this profile
                     profile.save()
 
-                    # Return JsonResponse to update the frontend dynamically
-                    return JsonResponse({'profile_exists': True})
+                    # Redirect to the home page after saving the form
+                    return redirect('home')  # Ganti 'home' dengan nama URL ke halaman home Anda
 
                 else:
                     # If the form is not valid, re-render the form with errors
@@ -516,64 +540,126 @@ def top_up_balance(request):
     users = User.objects.all()
     return render(request, 'topup.html', {'users': users})
 
+@login_required(login_url='login')
 def request_top_up(request):
     if request.method == 'POST':
         amount = request.POST.get('amount')
         
         try:
             amount = int(amount)
+            if amount <= 0:
+                messages.error(request, "Jumlah top-up harus lebih dari 0.")
+                return render(request, 'request_top_up.html')
+
             formatted_amount = "IDR {:,.0f}".format(float(amount)).replace(",", ".")
-            top_up_request = TopUpRequest.objects.create(user=request.user, amount=amount)
+            
+            # Membuat permintaan top-up
+            top_up_request = TopUpRequest.objects.create(
+                user=request.user,
+                amount=amount,
+                status='Pending'  # Menambahkan status awal
+            )
+            
             messages.success(request, f"Permintaan top-up {formatted_amount} berhasil diajukan.")
             return redirect('profile')
+            
         except ValueError:
             messages.error(request, "Jumlah yang dimasukkan tidak valid.")
-        
+            return render(request, 'request_top_up.html')
+    
     return render(request, 'request_top_up.html')
 
+@staff_member_required(login_url='login')
 def admin_top_up_requests(request):
     if not request.user.is_superuser:
         messages.error(request, "Anda tidak memiliki izin untuk mengakses halaman ini.")
         return redirect('profile')
     
-    requests = TopUpRequest.objects.all().order_by('-requested_at')  # Menggunakan requested_at
-    return render(request, 'admin_top_up_requests.html', {'requests': requests})
+    try:
+        requests = TopUpRequest.objects.all().order_by('-requested_at')
+        return render(request, 'admin_top_up_requests.html', {'requests': requests})
+    except Exception as e:
+        messages.error(request, f"Terjadi kesalahan: {str(e)}")
+        return redirect('profile')
 
+@staff_member_required(login_url='login')
 def approve_top_up(request, request_id):
-    top_up_request = get_object_or_404(TopUpRequest, id=request_id)
-
-    top_up_request.status = 'Sukses'
-    top_up_request.save()
-
-    user = top_up_request.user
-    top_up_amount = Decimal(top_up_request.amount)
-    formatted_amount = "IDR {:,.0f}".format(float(top_up_amount)).replace(",", ".")
-    user.profile.balance += top_up_amount
-    user.profile.save()
-
-    TransactionHistory.objects.create(
-        user=user,
-        amount=top_up_request.amount,
-        status='Approved'
-    )
-
-    top_up_request.delete()
-
-    messages.success(request, f"Top-up sebesar {formatted_amount} disetujui untuk {user.username}.")
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("Anda tidak memiliki izin untuk melakukan ini.")
+    
+    try:
+        top_up_request = get_object_or_404(TopUpRequest, id=request_id)
+        
+        # Validasi status
+        if top_up_request.status != 'Pending':
+            messages.error(request, "Permintaan top-up ini sudah diproses sebelumnya.")
+            return redirect('admin_top_up_requests')
+        
+        # Update status top-up
+        top_up_request.status = 'Sukses'
+        top_up_request.save()
+        
+        # Update saldo user
+        user = top_up_request.user
+        top_up_amount = Decimal(top_up_request.amount)
+        formatted_amount = "IDR {:,.0f}".format(float(top_up_amount)).replace(",", ".")
+        
+        user.profile.balance += top_up_amount
+        user.profile.save()
+        
+        # Catat transaksi
+        TransactionHistory.objects.create(
+            user=user,
+            amount=top_up_request.amount,
+            status='Approved',
+            description=f"Top-up sebesar {formatted_amount}"
+        )
+        
+        # Hapus permintaan top-up
+        top_up_request.delete()
+        
+        messages.success(request, f"Top-up sebesar {formatted_amount} disetujui untuk {user.username}.")
+        
+    except TopUpRequest.DoesNotExist:
+        messages.error(request, "Permintaan top-up tidak ditemukan.")
+    except Exception as e:
+        messages.error(request, f"Terjadi kesalahan: {str(e)}")
+    
     return redirect('admin_top_up_requests')
 
+@staff_member_required(login_url='login')
 def reject_top_up(request, request_id):
-    top_up_request = get_object_or_404(TopUpRequest, id=request_id)
-    formatted_amount = "IDR {:,.0f}".format(float(top_up_request.amount)).replace(",", ".")
-
-    TransactionHistory.objects.create(
-        user=top_up_request.user,
-        amount=top_up_request.amount,
-        status='Rejected'
-    )
-
-    messages.success(request, f"Permintaan top-up {formatted_amount} oleh {top_up_request.user.username} ditolak.")
-    top_up_request.delete()
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("Anda tidak memiliki izin untuk melakukan ini.")
+    
+    try:
+        top_up_request = get_object_or_404(TopUpRequest, id=request_id)
+        
+        # Validasi status
+        if top_up_request.status != 'Pending':
+            messages.error(request, "Permintaan top-up ini sudah diproses sebelumnya.")
+            return redirect('admin_top_up_requests')
+        
+        formatted_amount = "IDR {:,.0f}".format(float(top_up_request.amount)).replace(",", ".")
+        
+        # Catat transaksi
+        TransactionHistory.objects.create(
+            user=top_up_request.user,
+            amount=top_up_request.amount,
+            status='Rejected',
+            description=f"Top-up ditolak: {formatted_amount}"
+        )
+        
+        messages.success(request, f"Permintaan top-up {formatted_amount} oleh {top_up_request.user.username} ditolak.")
+        
+        # Hapus permintaan top-up
+        top_up_request.delete()
+        
+    except TopUpRequest.DoesNotExist:
+        messages.error(request, "Permintaan top-up tidak ditemukan.")
+    except Exception as e:
+        messages.error(request, f"Terjadi kesalahan: {str(e)}")
+    
     return redirect('admin_top_up_requests')
 
 
@@ -615,21 +701,49 @@ def update_order_status(request, order_id):
     
     if request.method == 'POST':
         new_status = request.POST.get('status')
-
-        if new_status == 'rejected':
-            # Jika status berubah menjadi 'rejected', kurangi saldo pengguna
-            if order.status != 'rejected':  # Pastikan tidak mengurangi saldo jika sudah 'rejected'
-                user_profile = order.user.profile
-                user_profile.balance -= order.total_price  # Mengurangi saldo sesuai dengan total harga order
-                user_profile.save()
-                messages.success(request, f'Order #{order.id} ditolak dan saldo dikurangi.')
-
-        # Update status order
-        order.status = new_status
-        order.save()
-        messages.success(request, f'Status order #{order.id} berhasil diperbarui menjadi {new_status}.')
         
+        try:
+            with transaction.atomic():
+                if new_status == 'rejected':
+                    # Jika status berubah menjadi 'rejected'
+                    if order.status != 'rejected':
+                        # 1. Kembalikan stok untuk setiap item
+                        for order_item in order.items.all():
+                            if order_item.makanan:
+                                product = order_item.makanan
+                                product.stok += order_item.quantity
+                                product.save()
+                            elif order_item.makanan2:
+                                product = order_item.makanan2
+                                product.stok += order_item.quantity
+                                product.save()
+                        
+                        # 2. Kembalikan saldo ke user
+                        user_profile = order.user.profile
+                        user_profile.balance += order.total_price
+                        user_profile.save()
+                        
+                        messages.success(request, f'Order #{order.id} ditolak, stok dikembalikan, dan saldo dikembalikan.')
+                
+                # Update status order
+                order.status = new_status
+                order.save()
+                messages.success(request, f'Status order #{order.id} berhasil diperbarui menjadi {new_status}.')
+                
+                # Tambahkan ke history transaksi
+                TransactionHistory.objects.create(
+                    user=order.user,
+                    amount=order.total_price,
+                    status=new_status,
+                    description=f"Order #{order.id} {new_status}"
+                )
+                
+        except Exception as e:
+            messages.error(request, f'Error updating order status: {str(e)}')
+            
         return redirect('admin_order_detail', order_id=order_id)
+
+    return redirect('admin_order_detail', order_id=order_id)
 
 
 @staff_member_required
@@ -930,7 +1044,6 @@ def order_item_detail(request, order_id, item_id):
     return render(request, 'order_item_detail.html', context)
 
 def create_order(user, total_price, cart_items):
-    """Create a new order with pending status and its order items"""
     with transaction.atomic():
         new_order = Order.objects.create(
             user=user,
@@ -947,6 +1060,10 @@ def create_order(user, total_price, cart_items):
         for item in cart_items:
             if item['model'] == 'makanan':
                 food_item = Makanan.objects.get(id=item['id'])
+                # Kurangi stok
+                food_item.stok -= item['quantity']
+                food_item.save()
+                
                 OrderItem.objects.create(
                     order=new_order,
                     makanan=food_item,
@@ -955,6 +1072,10 @@ def create_order(user, total_price, cart_items):
                 )
             elif item['model'] == 'makanan2':
                 food_item = Makanan2.objects.get(id=item['id'])
+                # Kurangi stok
+                food_item.stok -= item['quantity']
+                food_item.save()
+                
                 OrderItem.objects.create(
                     order=new_order,
                     makanan2=food_item,
@@ -1137,3 +1258,52 @@ def save_login_history(sender, request, user, **kwargs):
     # Create a new LoginHistory object when the user logs in
     ip_address = request.META.get('REMOTE_ADDR')  # Get the IP address from the request
     LoginHistory.objects.create(user=user, email=user.email, login_time=now(), ip_address=ip_address)
+
+
+@login_required
+def remove_from_cart(request, item_id):
+    """Remove item from cart for authenticated user"""
+    if 'cart' in request.session and str(request.user.id) in request.session['cart']:
+        cart = request.session['cart'][str(request.user.id)]
+        cart = [item for item in cart if item['id'] != item_id]
+        request.session['cart'][str(request.user.id)] = cart
+        request.session.modified = True
+        messages.success(request, "Item removed from cart")
+    return redirect('cart')
+
+@login_required
+def update_cart(request):
+    """Update cart quantities for authenticated user"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            item_id = data.get('id')
+            quantity = int(data.get('quantity', 1))
+            
+            if quantity < 1:
+                return JsonResponse({'error': 'Invalid quantity'}, status=400)
+
+            cart = request.session.get('cart', {}).get(str(request.user.id), [])
+            for item in cart:
+                if item['id'] == item_id:
+                    model = Makanan if item['model'] == 'makanan' else Makanan2
+                    product = model.objects.get(id=item_id)
+                    
+                    if product.stok < quantity:
+                        return JsonResponse({
+                            'error': 'Insufficient stock',
+                            'available': product.stok
+                        }, status=400)
+                        
+                    item['quantity'] = quantity
+                    break
+                    
+            request.session['cart'][str(request.user.id)] = cart
+            request.session.modified = True
+            
+            return JsonResponse({'success': True})
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+            
+    return JsonResponse({'error': 'Invalid method'}, status=405)

@@ -48,112 +48,160 @@
   </div>
 </div>
 
+<div id="empty-cart-popup" class="popup">
+  <div class="popup-content">
+      <div class="popup-header">Warning</div>
+      <div class="popup-message">Your cart is empty. Please add items to your cart before checking out.</div>
+  </div>
+</div>
+
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
-    const cartItemsContainer = document.getElementById("cart-items");
-    const totalAmountElement = document.querySelector(".cart-footer .total-price");
-    const totalItemsElement = document.querySelector(".cart-footer .total");
-    const userBalanceElement = document.getElementById('user-balance');
-    
-    const formatCurrency = new Intl.NumberFormat('en-US', {  
-      style: 'decimal',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
+      const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
+      const cartItemsContainer = document.getElementById("cart-items");
+      const totalAmountElement = document.querySelector(".cart-footer .total-price");
+      const totalItemsElement = document.querySelector(".cart-footer .total");
+      const userBalanceElement = document.getElementById('user-balance');
+      const popup = document.getElementById('empty-cart-popup');
+      const popupMessage = document.querySelector('#empty-cart-popup .popup-message');
+      const checkoutButton = document.getElementById('checkout-btn');
   
-    function updateCart() {
-      cartItemsContainer.innerHTML = "";
-      let totalAmount = 0;
-      let totalItems = 0;
-  
-      cartItems.forEach((item, index) => {
-        const adjustedPrice = item.price;
-        const itemTotal = adjustedPrice * item.quantity;
-        if (item.selected) {
-          totalAmount += itemTotal;
-          totalItems += item.quantity;
-        }
-  
-        const itemDiv = document.createElement("div");
-        itemDiv.classList.add("cart-item");
-        itemDiv.innerHTML = `
-          <div><input type="checkbox" class="select-item" data-index="${index}" ${item.selected ? 'checked' : ''}/></div>
-          <div class="product-info">
-            <img src="${item.image}" alt="${item.name}" width="50"/>
-            <div>${item.name}</div>
-          </div>
-          <div>IDR ${formatCurrency.format(adjustedPrice)}</div>
-          <div class="quantity-control">
-            <button class="decrease-quantity" data-index="${index}">-</button>
-            <input type="text" value="${item.quantity}" readonly/>
-            <button class="increase-quantity" data-index="${index}">+</button>
-          </div>
-          <div class="total-price">IDR ${formatCurrency.format(itemTotal)}</div>
-        `;
-        cartItemsContainer.appendChild(itemDiv);
+      const formatCurrency = new Intl.NumberFormat('en-US', {  
+          style: 'decimal',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
       });
   
-      totalAmountElement.innerText = `IDR ${formatCurrency.format(totalAmount)}`;
-      totalItemsElement.innerText = `Total (${totalItems} Items):`;
+      // Function to update the cart items dynamically
+      function updateCart() {
+          cartItemsContainer.innerHTML = "";
+          let totalAmount = 0;
+          let totalItems = 0;
   
-      addEventListeners();
-    }
+          cartItems.forEach((item, index) => {
+              const adjustedPrice = item.price;
+              const itemTotal = adjustedPrice * item.quantity;
+              if (item.selected) {
+                  totalAmount += itemTotal;
+                  totalItems += item.quantity;
+              }
   
-    function addEventListeners() {
-      document.querySelectorAll('.increase-quantity').forEach(button => {
-        button.addEventListener('click', function() {
-          const itemIndex = this.getAttribute('data-index');
-          cartItems[itemIndex].quantity += 1;
-          localStorage.setItem('cart', JSON.stringify(cartItems));
-          updateCart();
-        });
-      });
+              const itemDiv = document.createElement("div");
+              itemDiv.classList.add("cart-item");
+              itemDiv.innerHTML = ` 
+                  <div><input type="checkbox" class="select-item" data-index="${index}" ${item.selected ? 'checked' : ''}/></div>
+                  <div class="product-info">
+                      <img src="${item.image}" alt="${item.name}" width="50"/>
+                      <div>${item.name}</div>
+                  </div>
+                  <div>IDR ${formatCurrency.format(adjustedPrice)}</div>
+                  <div class="quantity-control">
+                      <button class="decrease-quantity" data-index="${index}">-</button>
+                      <input type="text" value="${item.quantity}" readonly/>
+                      <button class="increase-quantity" data-index="${index}">+</button>
+                  </div>
+                  <div class="total-price">IDR ${formatCurrency.format(itemTotal)}</div>
+              `;
+              cartItemsContainer.appendChild(itemDiv);
+          });
   
-      document.querySelectorAll('.decrease-quantity').forEach(button => {
-        button.addEventListener('click', function() {
-          const itemIndex = this.getAttribute('data-index');
-          if (cartItems[itemIndex].quantity > 1) {
-            cartItems[itemIndex].quantity -= 1;
-          } else {
-            cartItems.splice(itemIndex, 1);
+          totalAmountElement.innerText = `IDR ${formatCurrency.format(totalAmount)}`;
+          totalItemsElement.innerText = `Total (${totalItems} Items):`;
+  
+          addEventListeners();
+      }
+  
+      function addEventListeners() {
+          document.querySelectorAll('.increase-quantity').forEach(button => {
+              button.addEventListener('click', function() {
+                  const itemIndex = this.getAttribute('data-index');
+                  cartItems[itemIndex].quantity += 1;
+                  localStorage.setItem('cart', JSON.stringify(cartItems));
+                  updateCart();
+              });
+          });
+  
+          document.querySelectorAll('.decrease-quantity').forEach(button => {
+              button.addEventListener('click', function() {
+                  const itemIndex = this.getAttribute('data-index');
+                  if (cartItems[itemIndex].quantity > 1) {
+                      cartItems[itemIndex].quantity -= 1;
+                  } else {
+                      cartItems.splice(itemIndex, 1);
+                  }
+                  localStorage.setItem('cart', JSON.stringify(cartItems));
+                  updateCart();
+              });
+          });
+  
+          document.querySelectorAll('.select-item').forEach(checkbox => {
+              checkbox.addEventListener('change', function() {
+                  const itemIndex = this.getAttribute('data-index');
+                  cartItems[itemIndex].selected = this.checked;
+                  localStorage.setItem('cart', JSON.stringify(cartItems));
+                  updateCart();
+              });
+          });
+      }
+  
+      // Function to show the custom pop-up
+      function showPopup(message) {
+          popupMessage.textContent = message;  // Set the message to the pop-up
+          popup.classList.add('show');  // Show the pop-up
+          setTimeout(function() {
+              popup.classList.remove('show');  // Hide the pop-up after 3 seconds
+          }, 3000);  // 3000 milliseconds = 3 seconds
+      }
+  
+      // Handling checkout button click
+      checkoutButton.addEventListener('click', function(event) {
+          event.preventDefault(); // Prevent default form submission
+  
+          const selectedItems = cartItems.filter(item => item.selected);
+  
+          if (selectedItems.length === 0) {
+              showPopup("Silakan pilih item terlebih dahulu sebelum melakukan checkout.");
+              return;
           }
-          localStorage.setItem('cart', JSON.stringify(cartItems));
-          updateCart();
-        });
+  
+          const totalAmount = parseFloat(totalAmountElement.innerText.replace(/[^0-9.-]+/g, ''));
+          const userBalance = parseFloat(userBalanceElement.innerText.replace(/[^0-9.-]+/g, ''));
+  
+          if (totalAmount > userBalance) {
+              showPopup("Saldo tidak cukup untuk checkout.");
+          } else {
+              const checkoutData = {
+                  cart_items: selectedItems,
+                  total_price: totalAmount
+              };
+  
+              // Send data using fetch API to the backend in JSON format
+              fetch("{% url 'checkout' %}", {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json',
+                      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value // Include CSRF token
+                  },
+                  body: JSON.stringify(checkoutData)
+              })
+              .then(response => response.json())
+              .then(data => {
+                  if (data.status === 'success') {
+                      // Redirect to the order success page if successful
+                      window.location.href = data.redirect_url;
+                  } else {
+                      // Show error message if something goes wrong
+                      showPopup(data.message);
+                  }
+              })
+              .catch(error => {
+                  console.error("Error during checkout:", error);
+                  showPopup("Terjadi kesalahan saat checkout.");
+              });
+          }
       });
   
-      document.querySelectorAll('.select-item').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-          const itemIndex = this.getAttribute('data-index');
-          cartItems[itemIndex].selected = this.checked;
-          localStorage.setItem('cart', JSON.stringify(cartItems));
-          updateCart();
-        });
-      });
-    }
-  
-    updateCart();
-  
-    document.getElementById('checkout-btn').addEventListener('click', function() {
-      const selectedItems = cartItems.filter(item => item.selected);
-  
-      if (selectedItems.length === 0) {
-        alert("Silakan pilih item terlebih dahulu sebelum melakukan checkout.");
-        return;
-      }
-  
-      const totalAmount = parseFloat(totalAmountElement.innerText.replace(/[^\d.-]/g, ''));
-      const userBalance = parseFloat(userBalanceElement.innerText.replace(/[^\d.-]/g, ''));
-  
-      if (totalAmount > userBalance) {
-        alert("Saldo tidak cukup untuk checkout.");
-      } else {
-        document.getElementById('cart-data').value = JSON.stringify(selectedItems);
-        document.getElementById('total-price').value = totalAmount;
-        document.getElementById('checkout-form').submit();
-      }
-    });
+      updateCart();
   });
   </script>
 </body> 

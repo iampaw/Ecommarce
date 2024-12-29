@@ -177,9 +177,9 @@ class Order(models.Model):
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
-    makanan = models.ForeignKey('Makanan', on_delete=models.SET_NULL, null=True, blank=True)
-    makanan2 = models.ForeignKey('Makanan2', on_delete=models.SET_NULL, null=True, blank=True)
-    quantity = models.PositiveIntegerField()
+    makanan = models.ForeignKey(Makanan, null=True, blank=True, on_delete=models.SET_NULL)
+    makanan2 = models.ForeignKey(Makanan2, null=True, blank=True, on_delete=models.SET_NULL)
+    quantity = models.IntegerField()
     harga_total = models.DecimalField(max_digits=10, decimal_places=2)
 
     def save(self, *args, **kwargs):

@@ -345,3 +345,62 @@ a {
 a:hover {
   text-decoration: underline;
 }
+
+/* Initial style for the pop-up */
+.popup {
+  display: block;  /* Keep the pop-up in the document flow, we will use visibility and opacity */
+  visibility: hidden;  /* Initially hide the pop-up */
+  opacity: 0;  /* Initially hide the pop-up */
+  position: fixed;
+  left: 50%;
+  top: -200px;  /* Start above the screen */
+  transform: translateX(-50%);  /* Center horizontally */
+  background: #fff;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 15px;
+  width: 300px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  transition: top 0.4s ease-in-out, opacity 0.4s ease, visibility 0s linear 0.4s; /* Smooth transition for sliding down */
+  font-family: 'Karma';
+}
+
+/* Pop-up content */
+.popup-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.popup-header {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.popup-message {
+  margin: 10px 0;
+}
+
+.popup-ok-btn {
+  padding: 8px 15px;
+  background-color: #f44336;  /* Red color */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.popup-ok-btn:hover {
+  background-color: #d32f2f;  /* Darker red on hover */
+}
+
+/* When pop-up is shown */
+.popup.show {
+  visibility: visible;  /* Make pop-up visible */
+  opacity: 1;  /* Make pop-up fully opaque */
+  top: 20px;  /* Pop-up moves down to this position */
+  transition: top 0.4s ease-in-out, opacity 0.4s ease, visibility 0s linear 0s;  /* Transition both top and opacity */
+}

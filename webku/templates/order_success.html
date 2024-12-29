@@ -4,100 +4,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order</title>
+    <title>Detail Pesanan</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="{% static 'css/order.css' %}">
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link href='https://fonts.googleapis.com/css?family=Kavoon' rel='stylesheet'>
-    <link href='https://fonts.googleapis.com/css?family=Karma' rel='stylesheet'>
+    <link rel="stylesheet" href="{% static 'css/order.css' %}">
 </head>
 <body>
-    <div class="success-container">
-        <div class="success-icon"></div>
-        
-        <h2 id="order-status-text">
-            {% if order.status == 'approved' %}
-                Order Anda Sudah Diterima
-            {% elif order.status == 'rejected' %}
-                Pembayaran Ditolak
-            {% else %}
-                Pembayaran Sedang Diproses
-            {% endif %}
-        </h2>
-        
-        <p>Status Pesanan: <strong>{{ order.get_status_display }}</strong></p>
-        
-        <div class="order-details">
-            {% for item in order_items %}
-                <div>
-                    <strong>{{ item.makanan.nama_menu }}</strong> (x{{ item.quantity }}) - 
-                    <span class="money">{{ item.harga_total }}</span>
+<!-- order_success.html -->
+<div class="success-container">
+    <div class="success-icon"></div>
+    <h2 id="order-status-text">
+        {% if order.status == 'approved' %}
+            Order Anda Sudah Diterima
+        {% elif order.status == 'rejected' %}
+            Pembayaran Ditolak
+        {% else %}
+            <span class="processing">Pembayaran Sedang Diproses</span>
+        {% endif %}
+    </h2>
+
+    <p>Status Pesanan: <strong>{{ order.get_status_display }}</strong></p>
+
+    <!-- Order Details -->
+    <div class="order-details">
+        {% for item in order_items %}
+            <div class="order-item">
+                <div class="menu-details">
+                    <!-- Debugging: Check if makanan exists -->
+                    {% if item.makanan %}
+                        <span class="menu-name">{{ item.makanan.nama_menu }}</span>
+                    {% else %}
+                        <span class="menu-name"></span>
+                    {% endif %}
+
+                    {% if item.makanan2 %}
+                        <span class="menu-name">{{ item.makanan2.nama_category }}</span>  <!-- Corrected -->
+                    {% else %}
+                        <span class="menu-name"> </span>
+                    {% endif %}
+
+                    {% if item.makanan and item.makanan.deskripsi %}
+                        <span class="menu-description">{{ item.makanan.deskripsi }}</span>
+                    {% endif %}
+
+                    {% if item.makanan2 and item.makanan2.deskripsi %}
+                        <span class="menu-description">{{ item.makanan2.deskripsi }}</span>
+                    {% endif %}
+
+                    <div class="menu-info">
+                        <span class="quantity">Jumlah: {{ item.quantity }}x</span>
+                        <span class="price">Harga: <span class="money">{{ item.harga_total }}</span></span>
+                    </div>
                 </div>
-            {% endfor %}
-            <p><strong>Total Harga: </strong><span class="money">{{ total_price_scaled }}</span></p>
+            </div>
+        {% empty %}
+            <p>Anda belum memesan item apapun.</p>
+        {% endfor %}
+
+        <!-- Order Summary -->
+        <div class="order-summary">
+            <p><strong>Total Pembayaran: </strong><span class="money">{{ total_price_scaled }}</span></p>
             <p><strong>Saldo Anda Sekarang: </strong><span class="money" id="user-balance">{{ user_balance }}</span></p>
         </div>
-        
-        <a href="{% url 'home' %}">Kembali ke Beranda</a>
     </div>
 
-    <!-- Script untuk pengecekan status dan saldo secara dinamis -->
-    <script>
-        // Fungsi untuk memeriksa status pesanan dan saldo pengguna secara berkala
-        setInterval(function() {
-            fetch("{% url 'order_status' order.id %}")
-                .then(response => response.json())
-                .then(data => {
-                    // Perbarui status pesanan berdasarkan data dari server
-                    const statusText = document.querySelector('#order-status-text');
-                    if (data.status == 'approved') {
-                        statusText.innerText = 'Order Anda Sudah Diterima';
-                    } else if (data.status == 'rejected') {
-                        statusText.innerText = 'Pembayaran Ditolak, Saldo Dikembalikan';
-                    } else {
-                        statusText.innerText = 'Pembayaran Sedang Diproses';
-                    }
+    <a href="{% url 'home' %}">Kembali ke Beranda</a>
+</div>
 
-                    // Perbarui saldo pengguna berdasarkan data dari server
-                    const balanceElement = document.querySelector('#user-balance');
-                    const userBalance = parseFloat(data.user_balance);  // Pastikan data saldo dikonversi menjadi angka
+<!-- Currency Formatting Script -->
+<script>
+    document.querySelectorAll('.money').forEach(element => {
+        const numberString = element.innerHTML.replace(/[^\d.-]/g, '');
+        let number = parseFloat(numberString);
 
-                    if (!isNaN(userBalance)) {
-                        balanceElement.innerText = new Intl.NumberFormat('id-ID', {
-                            style: 'currency',
-                            currency: 'IDR'
-                        }).format(userBalance);
-                    } else {
-                        console.error("Saldo tidak valid:", data.user_balance);
-                        balanceElement.innerText = 'Saldo tidak valid'; // Tampilkan pesan jika saldo tidak valid
-                    }
-                })
-                .catch(error => console.error('Error fetching order status:', error));
-        }, 5000); // Cek setiap 5 detik
-    </script>
+        // Apply scaling if the number is too large
+        if (number >= 1000) {
+            number = number / 100; // or another scaling factor if needed
+        }
 
-    <script>
-        document.querySelectorAll('.money').forEach(element => {
-            const numberString = element.innerHTML.replace(/[^\d.-]/g, ''); // Menghapus karakter non-angka
-            const number = parseFloat(numberString); // Mengonversi ke angka
-
-            // Cek apakah angka valid
-            if (isNaN(number)) {
-                console.error("Format angka tidak valid: ", numberString);  // Cek apakah terjadi kesalahan
-                return;
-            }
-
-            // Format angka dengan simbol kustom
+        if (!isNaN(number)) {
             const formattedNumber = new Intl.NumberFormat('id-ID', {
                 style: 'currency',
                 currency: 'IDR',
-                minimumFractionDigits: 2,   
+                minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             }).format(number);
 
-            // Ganti "Rp" dengan "IDR"
             element.innerHTML = formattedNumber.replace('Rp', 'IDR');
-        });
-    </script>
+        }
+    });
+</script>
+
+<!-- Auto Update Status Script -->
+<script>
+    setInterval(function() {
+        fetch("{% url 'order_status' order.id %}")
+            .then(response => response.json())
+            .then(data => {
+                const statusTextElement = document.getElementById('order-status-text');
+                
+                // Update status text
+                if (data.status === 'approved') {
+                    statusTextElement.innerHTML = 'Order Anda Sudah Diterima';
+                } else if (data.status === 'rejected') {
+                    statusTextElement.innerHTML = 'Pembayaran Ditolak';
+                } else {
+                    statusTextElement.innerHTML = '<span class="processing">Pembayaran Sedang Diproses</span>';
+                }
+
+                // Update user balance
+                const balanceElement = document.querySelector('#user-balance');
+                const userBalance = parseFloat(data.user_balance);
+                
+                if (!isNaN(userBalance)) {
+                    balanceElement.innerText = new Intl.NumberFormat('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR'
+                    }).format(userBalance).replace('Rp', 'IDR');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }, 5000);
+</script>
 </body>
 </html>

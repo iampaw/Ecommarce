@@ -103,7 +103,7 @@
         <div class="cart-footer">
             {% if user.is_authenticated %}
                 <button class="close-btn">CLOSE</button>
-                <a href="{% url 'checkout' %}" class="checkout-btn">Check Out</a>
+                <button onclick="processCheckout()" class="checkout-btn">Check Out</button>
             {% else %}
                 <a href="{% url 'signup' %}" class="checkout-btn">Daftar untuk Checkout</a>
             {% endif %}
@@ -123,7 +123,6 @@
         </div>
         
         <script>
-        document.querySelector('.checkout-btn').addEventListener('click', function (event) {
             const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }}  // Convert Django boolean to JS
             if (isAuthenticated) {
                 const cartItems = document.querySelectorAll('.cart-item'); // Adjust selector as needed
@@ -591,6 +590,62 @@
             // Update keranjang ketika halaman dimuat
             updateCartSidebar();
         });
+        </script>
+        <script>
+            async function processCheckout() {
+    try {
+        // Get cart items from localStorage
+        const cartItems = JSON.parse(localStorage.getItem('cart') || '[]');
+        
+        // Check if cart is empty
+        if (cartItems.length === 0) {
+            const popup = document.getElementById('empty-cart-popup');
+            popup.classList.add('show');
+            setTimeout(() => {
+                popup.classList.remove('show');
+            }, 3000);
+            return;
+        }
+
+        // Calculate total price
+        const totalPrice = cartItems.reduce((total, item) => {
+            return total + (item.price * item.quantity);
+        }, 0);
+
+        // Prepare data for checkout
+        const checkoutData = {
+            cart_items: cartItems.map(item => ({
+                id: item.id,
+                model: item.model,
+                quantity: item.quantity,
+                price: item.price
+            })),
+            total_price: totalPrice
+        };
+
+        // Send checkout request
+        const response = await fetch('/checkout/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(checkoutData)
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            // Redirect to the checkout page first
+            window.location.href = '/checkout/';
+        } else {
+            alert(result.message || 'Terjadi kesalahan saat checkout');
+        }
+    } catch (error) {
+        console.error('Error during checkout:', error);
+        alert('Terjadi kesalahan saat melakukan checkout');
+    }
+}
         </script>
 </div>
 </body>

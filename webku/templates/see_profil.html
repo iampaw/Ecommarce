@@ -93,12 +93,13 @@
                     </div>
 
                     <div class="profile-section">
-                        {% if user.profile %}
                         <label>Saldo</label>
-                        <label>{{ user.profile.balance }}</label>
+                        {% if user.profile %}
+                            <label>{{ user.profile.balance }}</label>
+                            <a href="{% url 'request_top_up' %}">Request Top Up</a>
                         {% else %}
+                            <span>Lengkapi profil Anda untuk menggunakan fitur ini.</span>
                         {% endif %}
-                        <a href="{% url 'request_top_up' %}">Request Top Up</a>
                     </div>
                     
                     <div class="profile-section">

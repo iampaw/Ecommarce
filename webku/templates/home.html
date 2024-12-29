@@ -380,105 +380,115 @@
       433210102
      </div>
      <script>
-// Seleksi elemen-elemen yang dibutuhkan
-const cartSidebar = document.querySelector(".cart-sidebar");
-const cartItemsContainer = document.querySelector(".cart-items");
-const closeBtn = document.querySelector(".close-btn");
-
-// Fungsi untuk membuka sidebar keranjang
-function openCartSidebar() {
-    cartSidebar.style.right = "0";
-}
-
-// Fungsi untuk menutup sidebar keranjang
-function closeCartSidebar() {
-    cartSidebar.style.right = "-100%";
-}
-
-// Fungsi untuk mendapatkan CSRF token
-function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-}
-
-function addToCart(event) {
-    event.preventDefault();
-    
-    // Check if user is authenticated
-    const isAuthenticated = document.body.getAttribute('data-auth') === 'true';
-    
-    if (!isAuthenticated) {
-        // Redirect to signup page if user is not authenticated
-        window.location.href = '/signup/';  // Adjust the URL as needed
-        return;
-    }
-    
-    const button = event.target;
-    
-    // Rest of the existing addToCart logic
-    const itemId = button.getAttribute('data-id');
-    const itemName = button.getAttribute('data-name');
-    const itemPrice = parseFloat(button.getAttribute('data-price'));
-    const itemImage = button.getAttribute('data-image');
-    const itemModel = button.getAttribute('data-model');
-
-    if (!itemId || !itemName || !itemPrice || !itemImage || !itemModel) {
-        alert("Data item tidak lengkap!");
-        return;
-    }
-    
-    fetch('/kurangi-stok/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-            id: itemId,
-            model: itemModel,
-            jumlah: 1,
-            is_increment: false
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            const cart = JSON.parse(localStorage.getItem("cart")) || [];
-            const existingItem = cart.find(item => item.id === itemId);
-
-            if (existingItem) {
-                existingItem.quantity += 1;
-            } else {
-                cart.push({
-                    id: itemId,
-                    name: itemName,
-                    price: itemPrice,
-                    image: itemImage,
-                    quantity: 1,
-                    model: itemModel
-                });
-            }
-
-            localStorage.setItem("cart", JSON.stringify(cart));
-            updateCartSidebar();
-            openCartSidebar();
-            alert('Item berhasil ditambahkan ke keranjang');
-        } else {
-            alert(data.error || 'Stok tidak mencukupi');
+        // Seleksi elemen-elemen yang dibutuhkan
+        const cartSidebar = document.querySelector(".cart-sidebar");
+        const cartItemsContainer = document.querySelector(".cart-items");
+        const closeBtn = document.querySelector(".close-btn");
+        
+        // Fungsi untuk membuka sidebar keranjang
+        function openCartSidebar() {
+            cartSidebar.style.right = "0";
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Terjadi kesalahan saat menambahkan item ke keranjang');
-    });
-}
-    
+        
+        // Fungsi untuk menutup sidebar keranjang
+        function closeCartSidebar() {
+            cartSidebar.style.right = "-100%";
+        }
+        
+        // Fungsi untuk mendapatkan CSRF token
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+        
+        function addToCart(event) {
+            event.preventDefault();
+            
+            // Check if user is authenticated
+            const isAuthenticated = document.body.getAttribute('data-auth') === 'true';
+            
+            if (!isAuthenticated) {
+                // Redirect to signup page if user is not authenticated
+                window.location.href = '/signup/';  // Adjust the URL as needed
+                return;
+            }
+            
+            const button = event.target;
+            
+            // Rest of the existing addToCart logic
+            const itemId = button.getAttribute('data-id');
+            const itemName = button.getAttribute('data-name');
+            const itemPrice = parseFloat(button.getAttribute('data-price'));
+            const itemImage = button.getAttribute('data-image');
+            const itemModel = button.getAttribute('data-model');
+        
+            if (!itemId || !itemName || !itemPrice || !itemImage || !itemModel) {
+                alert("Data item tidak lengkap!");
+                return;
+            }
+            
+            fetch('/kurangi-stok/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    id: itemId,
+                    model: itemModel,
+                    jumlah: 1,
+                    is_increment: false
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const cart = JSON.parse(localStorage.getItem("cart")) || [];
+                    const existingItem = cart.find(item => item.id === itemId);
+        
+                    if (existingItem) {
+                        existingItem.quantity += 1;
+                    } else {
+                        cart.push({
+                            id: itemId,
+                            name: itemName,
+                            price: itemPrice,
+                            image: itemImage,
+                            quantity: 1,
+                            model: itemModel
+                        });
+                    }
+        
+                    localStorage.setItem("cart", JSON.stringify(cart));
+                    updateCartSidebar();
+                    openCartSidebar();
+                    
+                    // Tampilkan notifikasi di UI (contoh)
+                    const notification = document.createElement('div');
+                    notification.classList.add('notification');
+                    notification.textContent = 'Item berhasil ditambahkan ke keranjang';
+                    document.body.appendChild(notification);
+                    
+                    // Hapus notifikasi setelah beberapa detik
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 3000);
+                } else {
+                    alert(data.error || 'Stok tidak mencukupi');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan saat menambahkan item ke keranjang');
+            });
+        }
+            
         // Fungsi untuk memperbarui tampilan keranjang di sidebar
         function updateCartSidebar() {
             const cart = JSON.parse(localStorage.getItem('cart')) || [];
             cartItemsContainer.innerHTML = '';
-    
+        
             if (cart.length > 0) {
                 cart.forEach(item => {
                     const cartItem = document.createElement("div");
@@ -501,7 +511,7 @@ function addToCart(event) {
                         </div>
                     `;
                     cartItemsContainer.appendChild(cartItem);
-    
+        
                     // Event listener untuk tombol mengurangi kuantitas
                     cartItem.querySelector('.decrease-btn').addEventListener('click', () => {
                         fetch('/kurangi-stok/', {
@@ -535,7 +545,7 @@ function addToCart(event) {
                             }
                         });
                     });
-    
+        
                     // Event listener untuk tombol menambah kuantitas
                     cartItem.querySelector('.increase-btn').addEventListener('click', () => {
                         fetch('/kurangi-stok/', {
@@ -565,23 +575,23 @@ function addToCart(event) {
                 });
             }
         }
-    
+        
         // Tunggu sampai DOM selesai loading
         document.addEventListener('DOMContentLoaded', function() {
             // Event listener untuk tombol "Add to Cart"
             document.querySelectorAll('.btn-add-to-cart').forEach(button => {
                 button.addEventListener('click', addToCart);
             });
-    
+        
             // Event listener untuk tombol "Close" pada sidebar keranjang
             if (closeBtn) {
                 closeBtn.addEventListener('click', closeCartSidebar);
             }
-    
+        
             // Update keranjang ketika halaman dimuat
             updateCartSidebar();
         });
-    </script>
+        </script>
 </div>
 </body>
 </html>

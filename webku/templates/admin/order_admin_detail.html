@@ -37,10 +37,36 @@
                 <tbody>
                     {% for item in order.items.all %}
                     <tr>
-                        <td>{{ item.makanan.nama_menu }}</td>
+                        <td>
+                            {% if item.makanan %}
+                                {{ item.makanan.nama_menu }}
+                            {% elif item.makanan2 %}
+                                {{ item.makanan2.nama_menu }}
+                            {% else %}
+                                No Menu Item
+                            {% endif %}
+                            <!-- Debugging -->
+                            <p>{{ item.makanan2 }}</p>
+                        </td>
                         <td>{{ item.quantity }}</td>
-                        <td>IDR {{ item.makanan.harga|floatformat:2 }}</td>
-                        <td>IDR {{ item.harga_total|floatformat:2 }}</td>
+                        <td>
+                            {% if item.makanan %}
+                                IDR {{ item.makanan.harga|floatformat:2 }}
+                            {% elif item.makanan2 %}
+                                IDR {{ item.makanan2.harga|floatformat:2 }}
+                            {% else %}
+                                IDR 0.00
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.makanan %}
+                                IDR {{ item.harga_total|floatformat:2 }}
+                            {% elif item.makanan2 %}
+                                IDR {{ item.harga_total|floatformat:2 }}
+                            {% else %}
+                                IDR 0.00
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

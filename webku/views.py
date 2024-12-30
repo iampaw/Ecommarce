@@ -209,92 +209,43 @@ def menu(request):
     })
 
 
-@login_required
 def checkout(request):
     if request.method == 'POST':
         try:
-            # Parse JSON data from the request body
-            try:
-                data = json.loads(request.body)
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON decode error: {e}")
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Invalid JSON data'
-                }, status=400)
-
+            data = json.loads(request.body)
             cart_items = data.get('cart_items', [])
-            total_price = data.get('total_price', '0')
+            total_price = Decimal(data.get('total_price', '0'))
 
-            # Log parsed data
-            logger.debug(f"Received data: {data}")
-
-            # Validate cart items and total price
             if not cart_items:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Keranjang belanja kosong'
-                }, status=400)
+                return JsonResponse({'status': 'error', 'message': 'Keranjang belanja kosong'}, status=400)
 
-            try:
-                total_price = Decimal(total_price)
-            except (ValueError, TypeError):
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Total price is invalid'
-                }, status=400)
+            profile = request.user.profile
 
-            # Get the user's profile and validate balance
-            try:
-                profile = request.user.profile
-            except ObjectDoesNotExist:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Profile pengguna tidak ditemukan'
-                }, status=400)
-
+            # Check balance but don't deduct yet
             if profile.balance < total_price:
                 return JsonResponse({
                     'status': 'error',
                     'message': f'Saldo tidak mencukupi. Saldo: {profile.balance}, Total: {total_price}'
                 }, status=400)
 
-            # Process the order inside a transaction
+            # Create order without deducting balance
             with transaction.atomic():
-                # Create the order
-                try:
-                    order = create_order(request.user, total_price, cart_items)
-                except Exception as e:
-                    logger.error(f"Order creation error: {e}")
-                    raise
-
-                # Update the user's balance
-                profile.balance -= total_price
-                profile.save()
-
-                # Success response
+                order = create_order(request.user, total_price, cart_items)
+                
                 return JsonResponse({
                     'status': 'success',
                     'message': 'Order berhasil dibuat',
-                    'redirect_url': reverse('order_success')  # Redirect to order success page
+                    'redirect_url': reverse('order_success')
                 })
 
         except Exception as e:
             logger.error(f"Unexpected error: {e}")
             return JsonResponse({
                 'status': 'error',
-                'message': 'Terjadi kesalahan sistem saat checkout'
+                'message': f'Terjadi kesalahan sistem saat checkout: {str(e)}'
             }, status=500)
 
-    elif request.method == 'GET':
-        # Render the checkout page for GET requests
-        return render(request, 'checkout.html')
-
-    # If the method is not allowed
-    return JsonResponse({
-        'status': 'error',
-        'message': 'Method not allowed'
-    }, status=405)
+    return render(request, 'checkout.html')
 
 def get_makanan_by_id(item):
     """Helper function to get food item based on model type"""
@@ -814,6 +765,12 @@ def approve_order(request, order_id):
                     messages.error(request, f'Order #{order.id} cannot be approved - invalid status')
                     return redirect('admin_order_detail', order_id=order_id)
 
+                # Get user profile and check balance
+                user_profile = order.user.profile
+                if user_profile.balance < order.total_price:
+                    messages.error(request, f'Insufficient balance for Order #{order.id}')
+                    return redirect('admin_order_detail', order_id=order_id)
+
                 # Check stock availability
                 for item in order.items.all():
                     product = item.makanan if item.makanan else item.makanan2
@@ -829,6 +786,10 @@ def approve_order(request, order_id):
                     product.stok -= item.quantity
                     product.save()
 
+                # Deduct balance only at approval
+                user_profile.balance -= order.total_price
+                user_profile.save()
+
                 # Update order status
                 order.status = 'approved'
                 order.save()
@@ -840,12 +801,6 @@ def approve_order(request, order_id):
                     status='Approved',
                     description=f"Order #{order.id} approved"
                 )
-
-                # Clear user's cart
-                if str(order.user.id) in request.session.get('cart', {}):
-                    cart = request.session['cart']
-                    cart[str(order.user.id)] = []
-                    request.session['cart'] = cart
 
                 messages.success(request, f'Order #{order.id} has been approved')
 
@@ -1107,7 +1062,6 @@ def create_order(user, total_price, cart_items):
             ).first()
             
             if existing_order:
-                logger.warning(f"Duplicate order detected for user {user.id}: {existing_order.id}")
                 return existing_order
             
             new_order = Order.objects.create(
@@ -1115,41 +1069,33 @@ def create_order(user, total_price, cart_items):
                 status='pending',
                 total_price=total_price
             )
-            logger.info(f"Created new order {new_order.id} for user {user.id}")
 
-            processed_items = set()  # Track processed items
+            processed_items = set()
 
             for item in cart_items:
                 item_key = (item['id'], item['model'])
                 if item_key in processed_items:
-                    logger.warning(f"Skipping duplicate item {item_key} for order {new_order.id}")
                     continue
                 
                 processed_items.add(item_key)
                 
                 if item['model'] == 'makanan':
-                    food_item = Makanan.objects.select_for_update().get(id=item['id'])
+                    food_item = Makanan.objects.get(id=item['id'])
                     OrderItem.objects.create(
                         order=new_order,
                         makanan=food_item,
                         quantity=item['quantity'],
                         harga_total=Decimal(str(item['price'])) * Decimal(str(item['quantity']))
                     )
-                    food_item.stok -= item['quantity']
-                    food_item.save()
                     
                 elif item['model'] == 'makanan2':
-                    food_item = Makanan2.objects.select_for_update().get(id=item['id'])
+                    food_item = Makanan2.objects.get(id=item['id'])
                     OrderItem.objects.create(
                         order=new_order,
                         makanan2=food_item,
                         quantity=item['quantity'],
                         harga_total=Decimal(str(item['price'])) * Decimal(str(item['quantity']))
                     )
-                    food_item.stok -= item['quantity']
-                    food_item.save()
-                
-                logger.info(f"Added item {item_key} to order {new_order.id}")
             
             return new_order
             

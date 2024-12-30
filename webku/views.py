@@ -23,6 +23,9 @@ from django.dispatch import receiver
 from django.http import HttpResponseForbidden
 from django.contrib.auth.decorators import user_passes_test
 from django.urls import reverse
+from datetime import timedelta
+from django.utils import timezone
+
 
 
 logger = logging.getLogger(__name__)
@@ -805,40 +808,32 @@ def approve_order(request, order_id):
     if request.method == 'POST':
         try:
             with transaction.atomic():
-                # Get the order
                 order = get_object_or_404(Order, id=order_id)
                 
-                # Only process if order is in pending state
                 if order.status != 'pending':
                     messages.error(request, f'Order #{order.id} cannot be approved - invalid status')
                     return redirect('admin_order_detail', order_id=order_id)
 
-                # Check stock availability before approving the order
+                # Check stock availability
                 for item in order.items.all():
-                    # Accessing either 'makanan' or 'makanan2' instead of 'product'
-                    if item.makanan:
-                        product = item.makanan
-                    elif item.makanan2:
-                        product = item.makanan2
-                    else:
-                        # If no valid product found, return an error
+                    product = item.makanan if item.makanan else item.makanan2
+                    if not product:
                         messages.error(request, f"Invalid product for order item #{item.id}.")
                         return redirect('admin_order_detail', order_id=order_id)
 
                     if product.stok < item.quantity:
-                        # If stock is insufficient, return an error message
                         messages.error(request, f"Insufficient stock for {product.nama_menu}. Only {product.stok} left.")
                         return redirect('admin_order_detail', order_id=order_id)
 
-                    # Deduct the stock for each item in the order
+                    # Deduct stock
                     product.stok -= item.quantity
                     product.save()
 
-                # Update the order status to approved
+                # Update order status
                 order.status = 'approved'
                 order.save()
 
-                # Create transaction history entry for the approval
+                # Create transaction history
                 TransactionHistory.objects.create(
                     user=order.user,
                     amount=order.total_price,
@@ -846,36 +841,17 @@ def approve_order(request, order_id):
                     description=f"Order #{order.id} approved"
                 )
 
-                # Record the items in OrderItem table (if not already done)
-                cart = request.session.get('cart', {}).get(str(order.user.id), [])
-                for item in cart:
-                    food_model = Makanan if item['model'] == 'makanan' else Makanan2
-                    
-                    try:
-                        food = food_model.objects.get(id=item['id'])
-                        OrderItem.objects.create(
-                            order=order,
-                            makanan=food if item['model'] == 'makanan' else None,
-                            makanan2=food if item['model'] == 'makanan2' else None,
-                            quantity=item['quantity'],
-                            harga_total=food.harga * item['quantity']
-                        )
-                    except food_model.DoesNotExist:
-                        messages.warning(request, f"Item {item['name']} not found in database")
-                        continue
-                
-                # Clear the user's cart after successful order
+                # Clear user's cart
                 if str(order.user.id) in request.session.get('cart', {}):
                     cart = request.session['cart']
                     cart[str(order.user.id)] = []
                     request.session['cart'] = cart
 
-                messages.success(request, f'Order #{order.id} has been approved and items have been recorded')
+                messages.success(request, f'Order #{order.id} has been approved')
 
         except Exception as e:
             messages.error(request, f'Error processing order: {str(e)}')
-            return redirect('admin_order_detail', order_id=order_id)
-
+            
         return redirect('admin_order_detail', order_id=order_id)
 
     return redirect('admin_order_detail', order_id=order_id)
@@ -883,52 +859,59 @@ def approve_order(request, order_id):
 @login_required
 def reject_order(request, order_id):
     order = get_object_or_404(Order, id=order_id)
-
-    # Pastikan status order bukan 'rejected' sebelum memproses
-    if order.status != 'rejected':
-        refund_amount = order.total_price
-        user = order.user
-
-        try:
-            # Atomic transaction untuk memastikan kedua aksi berjalan bersamaan
-            with transaction.atomic():
-                # Update status order menjadi 'rejected'
-                order.status = 'rejected'
-                order.save()
-
-                # Kembalikan stok untuk setiap item di order
-                for item in order.items.all():
-                    if item.makanan:
-                        product = item.makanan
-                    elif item.makanan2:
-                        product = item.makanan2
-                    else:
-                        # Jika tidak ada produk yang ditemukan, kirim pesan error
-                        messages.error(request, f"Item #{item.id} tidak memiliki produk yang valid.")
-                        return redirect('admin_order_detail', order_id=order_id)
-
-                    # Kembalikan stok produk
-                    product.stok += item.quantity
-                    product.save()
-
-                # Kembalikan saldo ke user
+    
+    # Check if order is already rejected
+    if order.status == 'rejected':
+        return JsonResponse({'error': 'Order sudah ditolak sebelumnya'}, status=400)
+    
+    original_status = order.status
+    refund_amount = order.total_price
+    user = order.user
+    
+    try:
+        with transaction.atomic():
+            # Update order status
+            order.status = 'rejected'
+            order.save()
+            
+            # Return stock for each item
+            for item in order.items.all():
+                if item.makanan:
+                    product = item.makanan
+                elif item.makanan2:
+                    product = item.makanan2
+                else:
+                    messages.error(request, f"Item #{item.id} tidak memiliki produk yang valid.")
+                    return redirect('admin_order_detail', order_id=order_id)
+                
+                product.stok += item.quantity
+                product.save()
+            
+            # Only refund if the order wasn't already rejected
+            if original_status in ['pending', 'approved']:
                 user.profile.balance += refund_amount
                 user.profile.save()
-
-                # Kirim response JSON yang menyertakan status order dan saldo pengguna terbaru
-                return JsonResponse({
-                    'status': 'rejected',
-                    'user_balance': str(user.profile.balance),  # Pastikan format ini sesuai dengan yang diinginkan
-                })
-
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-
-    # Jika status order sudah 'rejected', kembalikan error
-    return JsonResponse({'error': 'Order sudah ditolak sebelumnya'}, status=400)
+                
+                # Create transaction record with 'Rejected' status instead of 'Refunded'
+                TransactionHistory.objects.create(
+                    user=user,
+                    amount=refund_amount,
+                    status='Rejected',  # Changed from 'Refunded' to 'Rejected'
+                    description=f"Pengembalian dana untuk Order #{order.id}: Status diubah dari {original_status} ke rejected"
+                )
+            
+            return JsonResponse({
+                'status': 'rejected',
+                'user_balance': str(user.profile.balance),
+                'refund_amount': str(refund_amount)
+            })
+            
+    except Exception as e:
+        logging.error(f"Error rejecting order #{order.id}: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
     
 def process_order(order):
-    """Memproses pesanan yang disetujui atau ditolak dengan memperbarui stok dan transaksi."""
+    """Memproses pesanan yang disetujui dengan memperbarui stok dan transaksi."""
     try:
         with transaction.atomic():
             if order.status == 'approved':
@@ -936,32 +919,19 @@ def process_order(order):
                     makanan = item.makanan
                     makanan.stok -= item.quantity
                     makanan.save()
-
-                # Membuat catatan transaksi
+                
+                # Create transaction record
                 TransactionHistory.objects.create(
                     user=order.user,
                     amount=order.total_price,
                     status='Approved',
                     description=f"Order #{order.id} disetujui"
                 )
-
-            elif order.status == 'rejected':
-                # Mengembalikan saldo yang telah dipotong
-                order.user.profile.balance += order.total_price
-                order.user.profile.save()
-
-                # Membuat catatan transaksi
-                TransactionHistory.objects.create(
-                    user=order.user,
-                    amount=order.total_price,
-                    status='Rejected',
-                    description=f"Order #{order.id} ditolak dan saldo dikembalikan"
-                )
-
+            
             order.save()
             return order
+            
     except Exception as e:
-        # Tangani error dan buat pesan log jika diperlukan
         logging.error(f"Error processing order #{order.id}: {str(e)}")
         raise
 
@@ -1127,57 +1097,66 @@ def order_item_detail(request, order_id, item_id):
 def create_order(user, total_price, cart_items):
     with transaction.atomic():
         try:
-            print(f"Creating order for user: {user}, total price: {total_price}")
-            print(f"Cart items: {cart_items}")  # Debug logging
+            # Check for existing pending order within last minute
+            one_minute_ago = timezone.now() - timedelta(minutes=1)
+            existing_order = Order.objects.filter(
+                user=user,
+                status='pending',
+                created_at__gte=one_minute_ago,
+                total_price=total_price
+            ).first()
+            
+            if existing_order:
+                logger.warning(f"Duplicate order detected for user {user.id}: {existing_order.id}")
+                return existing_order
             
             new_order = Order.objects.create(
                 user=user,
                 status='pending',
                 total_price=total_price
             )
+            logger.info(f"Created new order {new_order.id} for user {user.id}")
 
-            if user.profile.balance < total_price:
-                raise ValueError("Insufficient balance.")
-
-            user.profile.balance -= total_price
-            user.profile.save()
+            processed_items = set()  # Track processed items
 
             for item in cart_items:
-                print(f"Processing item: {item}")  # Debug logging
+                item_key = (item['id'], item['model'])
+                if item_key in processed_items:
+                    logger.warning(f"Skipping duplicate item {item_key} for order {new_order.id}")
+                    continue
+                
+                processed_items.add(item_key)
                 
                 if item['model'] == 'makanan':
-                    food_item = Makanan.objects.get(id=item['id'])
-                    food_item.stok -= item['quantity']
-                    food_item.save()
-                    
-                    order_item = OrderItem.objects.create(
+                    food_item = Makanan.objects.select_for_update().get(id=item['id'])
+                    OrderItem.objects.create(
                         order=new_order,
                         makanan=food_item,
                         quantity=item['quantity'],
                         harga_total=Decimal(str(item['price'])) * Decimal(str(item['quantity']))
                     )
-                    print(f"Created order item: {order_item.id}")  # Debug logging
-                    
-                elif item['model'] == 'makanan2':
-                    food_item = Makanan2.objects.get(id=item['id'])
                     food_item.stok -= item['quantity']
                     food_item.save()
                     
-                    order_item = OrderItem.objects.create(
+                elif item['model'] == 'makanan2':
+                    food_item = Makanan2.objects.select_for_update().get(id=item['id'])
+                    OrderItem.objects.create(
                         order=new_order,
                         makanan2=food_item,
                         quantity=item['quantity'],
                         harga_total=Decimal(str(item['price'])) * Decimal(str(item['quantity']))
                     )
-                    print(f"Created order item: {order_item.id}")  # Debug logging
-
+                    food_item.stok -= item['quantity']
+                    food_item.save()
+                
+                logger.info(f"Added item {item_key} to order {new_order.id}")
+            
             return new_order
             
         except Exception as e:
-            print(f"Error creating order: {str(e)}")  # Debug logging
+            logger.error(f"Error creating order: {str(e)}")
             raise
         
-
 def check_and_reduce_stock(item_id, model, quantity):
     """Check stock availability and reduce stock if sufficient"""
     with transaction.atomic():

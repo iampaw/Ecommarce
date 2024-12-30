@@ -132,12 +132,13 @@ class TransactionHistory(models.Model):
     STATUS_CHOICES = [
         ('Approved', 'Approved'),
         ('Rejected', 'Rejected'),
+        ('Refunded', 'Refunded')  # Add Refunded as a valid status
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES)
-    description = models.TextField()  # Pastikan kolom description ada
+    description = models.TextField()
     processed_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

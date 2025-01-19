@@ -23,7 +23,11 @@ from django.dispatch import receiver
 from django.http import HttpResponseForbidden
 from django.contrib.auth.decorators import user_passes_test
 from django.urls import reverse
-
+import requests
+from .models import TopUpRequest
+from .models import Order, OrderItem
+from datetime import timedelta
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +40,23 @@ def superuser_required(function):
 
 @login_required
 def get_cart(request):
-    """Get cart contents for authenticated user only"""
-    cart = request.session.get('cart', {}).get(str(request.user.id), [])
-    return JsonResponse({'cart': cart})
+    """
+    Get cart contents for authenticated user only.
+    Cart is stored in session and linked to user ID.
+    """
+    try:
+        # Ambil keranjang berdasarkan user ID di sesi
+        user_cart = request.session.get('cart', {}).get(str(request.user.id), [])
+
+        # Validasi format keranjang
+        if not isinstance(user_cart, list):
+            return JsonResponse({'status': 'error', 'message': 'Keranjang tidak valid'}, status=400)
+
+        # Kembalikan data keranjang
+        return JsonResponse({'status': 'success', 'cart': user_cart})
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'Kesalahan sistem: {str(e)}'}, status=500)
 
 @login_required
 def order_status(request, order_id):
@@ -93,6 +111,9 @@ def order_admin_detail(request, order_id):
     }
     return render(request, 'admin/order_admin_detail.html', context)
 
+def history_view(request):
+    return render(request, 'history.html')
+
 def process_approved_order(order):
     """Memproses order yang disetujui dengan memperbarui stok dan membuat catatan transaksi"""
     with transaction.atomic():
@@ -140,11 +161,39 @@ def order_success(request):
             'user_balance': user_balance,
             'order_status': order_status,
         }
+        order.send_discord_notification()
         return render(request, 'order_success.html', context)
     except Order.DoesNotExist:
         messages.error(request, "Tidak ada order yang ditemukan")
         return redirect('home')
     
+@login_required
+def history_view(request):
+    # Print untuk debug
+    orders = Order.objects.filter(
+        user=request.user,
+        status='approved'
+    ).prefetch_related('items__makanan', 'items__makanan2').order_by('-created_at')
+    
+    print("Debug - Total orders:", orders.count())
+    
+    orders_with_items = []
+    for order in orders:
+        order_items = order.items.all()
+        print(f"Debug - Order {order.id} items:", order_items)
+        
+        orders_with_items.append({
+            'date': order.created_at,
+            'items': order_items,
+            'total_price': order.total_price,
+            'status': order.status
+        })
+    
+    context = {
+        'orders': orders_with_items
+    }
+    return render(request, 'history.html', context)
+
 def profile(request):
     # Check if profile exists for current user
     profile_exists = hasattr(request.user, 'profile')
@@ -615,8 +664,8 @@ def request_top_up(request):
             )
             
             messages.success(request, f"Permintaan top-up {formatted_amount} berhasil diajukan.")
+            top_up_request.send_discord_notification()
             return redirect('profile')
-            
         except ValueError:
             messages.error(request, "Jumlah yang dimasukkan tidak valid.")
             return render(request, 'request_top_up.html')
@@ -1399,3 +1448,46 @@ def update_cart(request):
             return JsonResponse({'error': str(e)}, status=400)
             
     return JsonResponse({'error': 'Invalid method'}, status=405)
+
+
+@staff_member_required
+def order_admin_detail(request, order_id=None):
+    if order_id:
+        order = get_object_or_404(Order, id=order_id)
+
+        # Untuk aksi approve
+        if 'approve' in request.POST:
+            order.status = 'approved'
+            order.save()
+            messages.success(request, f'Order {order.id} has been approved.')
+            return redirect('admin_order_detail_by_id', order_id=order.id)  # Redirect ke halaman daftar pesanan
+
+        # Untuk aksi reject
+        elif 'reject' in request.POST:
+            order.status = 'rejected'
+            order.save()
+            messages.error(request, f'Order {order.id} has been rejected.')
+            return redirect('admin_order_list')  # Redirect ke halaman daftar pesanan
+
+        context = {
+            'order': order,
+            'is_single_order': True,  # Flag untuk menunjukkan bahwa ini detail pesanan tunggal
+        }
+        return render(request, 'admin/order_admin_detail.html', context)
+
+    # Menampilkan semua pesanan
+    orders = Order.objects.filter(status__in=['pending', 'approved', 'rejected']) \
+                           .select_related('user') \
+                           .prefetch_related('items')
+    
+    pending_orders = orders.filter(status='pending')
+    approved_orders = orders.filter(status='approved')
+    rejected_orders = orders.filter(status='rejected')
+    
+    context = {
+        'pending_orders': pending_orders,
+        'approved_orders': approved_orders,
+        'rejected_orders': rejected_orders,
+        'is_single_order': False,  # Flag untuk menampilkan daftar pesanan
+    }
+    return render(request, 'admin/order_admin_detail.html', context)

@@ -4,6 +4,13 @@ from django.db import models, transaction
 from django.contrib.auth.models import User
 from django.contrib import admin
 from django.utils.timezone import now
+import requests
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.conf import settings
+
+
+
 
 
 class Makanan(models.Model):
@@ -128,6 +135,32 @@ class TopUpRequest(models.Model):
     def __str__(self):
         return f"Permintaan top-up oleh {self.user.username} sebesar {self.amount} IDR"
     
+    def send_discord_notification(self):
+        # URL webhook Discord
+        discord_webhook_url = "https://discord.com/api/webhooks/1322876428148146226/esEMjvquOZwRN51y0NXRQhIDCDnMcd5v-0kTrg1zLGnUJfWX1c59DWI7DF2FcYX_AHcy"
+
+        # Pesan yang akan dikirim
+        message = {
+            "content": (
+                f"**Top-Up Request Notification**\n"
+                f"User: {self.user.username}\n"
+                f"Amount: {self.amount} IDR\n"
+                f"Status: {self.status}\n"
+                f"Time: {self.requested_at.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+        }
+
+        # Kirim permintaan POST ke webhook Discord
+        try:
+            response = requests.post(discord_webhook_url, json=message)
+            if response.status_code == 204:
+                print("Discord notification sent successfully!")
+            else:
+                print(f"Failed to send Discord notification: {response.status_code} - {response.text}")
+        except Exception as e:
+            print(f"Error sending Discord notification: {e}")
+
+
 class TransactionHistory(models.Model):
     STATUS_CHOICES = [
         ('Approved', 'Approved'),
@@ -172,8 +205,50 @@ class Order(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def update_total_price(self):
+        # Menghitung total dari semua order items
+        total = sum(item.harga_total for item in self.items.all())
+        self.total_price = total
+        self.save()
+
     def __str__(self):
         return f"Order #{self.id} - {self.get_status_display()}"
+    
+    def send_discord_notification(self):
+        """Mengirim notifikasi ke Discord dengan detail pesanan."""
+        discord_webhook_url = "https://discord.com/api/webhooks/1322881231020490854/Yr2OHvI4bK0HdsAJlKE3tBWDUU12xOBP217ubrVnNYiWOzPEGs_DzVt7wz1yxNYiuV20"  # Ganti dengan URL webhook Discord Anda
+
+        # Ambil detail item dalam pesanan
+        items = self.items.all()  # Mengakses related_name dari ForeignKey
+        item_details = "\n".join(
+            [
+                f"- {item.makanan.nama_menu if item.makanan else item.makanan2.nama_category} x {item.quantity} (IDR {item.harga_total:,.2f})"
+                for item in items
+            ]
+        )
+
+        print(f"DEBUG: Item details: {item_details}")  # Debug
+
+        # Pesan yang akan dikirim ke Discord
+        message = f"""
+        **Incoming Order!**
+        **User:** {self.user.username}
+        **Order ID:** #{self.id}
+        **Total Price:** IDR {self.total_price:,.2f}
+        **Items:**\n{item_details}
+        
+        **Status:** {self.get_status_display()}
+        """
+
+        # Kirim ke Discord
+        payload = {"content": message}
+        try:
+            response = requests.post(discord_webhook_url, json=payload)
+            response.raise_for_status()
+            print("Discord notification sent successfully!")
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to send Discord notification: {e}")
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
@@ -187,8 +262,11 @@ class OrderItem(models.Model):
             self.harga_total = self.makanan.harga * self.quantity
         elif self.makanan2:
             self.harga_total = self.makanan2.harga * self.quantity
-        super().save(*args, **kwargs)
+        else:
+            self.harga_total = 0  # Atau nilai default lainnya jika tidak ada makanan
 
+        super().save(*args, **kwargs)
+        self.order.update_total_price()  # Pastikan total harga diupdate
 
 
 

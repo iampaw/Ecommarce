@@ -69,7 +69,7 @@ html {
     color: #c85c42;
     position: relative;
     top: 250px;
-    margin-left: 40px; /* Beri jarak horizontal untuk menyesuaikan tata letak */
+    margin-left: 20px;
     font-family: 'Kavoon';
 }
 
@@ -179,16 +179,16 @@ html {
 .nav-links input[type="text"] {
     background: rgba(113, 47, 0, 0.212);
     color: #000000;
-    padding: 1px 10px 1px 30px; /* Tambahkan padding kiri untuk ruang ikon */
+    padding: 1px 10px 1px 30px;
     border: 2px solid transparent;
     border-radius: 10px;
     outline: none;
     margin-top: 8px;
     position: relative;
-    margin-left: 40px;
     font-size: 17px;
-    width: 200px; /* Atur lebar input sesuai keinginan */
+    width: 200px;
     font-family: 'Karma';
+    top: -5px;
 }
 
 .container .fa-search {
@@ -196,8 +196,8 @@ html {
     color: #000;
     margin-right: 9px;
     position: relative;
-    left: 78px;
-    top: 14px;
+    left: 35px;
+    top: 10px;
 }
 
 .nav-links input[type="text"]::placeholder {
@@ -318,17 +318,17 @@ html {
         flex-direction: column; /* Agar terlihat seperti garis tiga */
     }
     .nav-links {
-        display: none; /* Menyembunyikan nav links secara default */
+        display: none;
         width: 300px;
-        position: absolute; /* Menjadikan box muncul di bawah toggle */
-        top: 260px; /* Atur jarak dari atas */
+        position: absolute;
+        top: 70px;
         left: 0;
-        right: 0; /* Agar box melebar sesuai lebar navbar */
-        background-color: #F9F0DF; /* Warna background */
-        border: 1px solid rgb(140, 75, 0); /* Border untuk box */
-        border-radius: 5px; /* Menghaluskan sudut */
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Bayangan untuk efek 3D */
-        z-index: 10; /* Pastikan box di atas elemen lain */
+        right: 0;
+        background-color: #F9F0DF;
+        border: 1px solid rgb(140, 75, 0);
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        z-index: 10;
     }
     .nav-links.active {
         display: list-item; /* Menampilkan link ketika menu toggle aktif */
@@ -371,7 +371,7 @@ html {
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* Menambahkan bayangan lebih besar */
 }
 
-.btn-add-to-card {
+.btn-add-to-cart {
     background-color: #0BB0C8;
     border: none;
     color: #000;
@@ -385,12 +385,7 @@ html {
     position: relative;
 }
 
-.btn-add-to-card:hover {
-    background-color: #c0c0c0;
-}
-
-
-.btn-add-to-card:hover {
+.btn-add-to-cart:hover {
     background-color: #c0c0c0;
 }
 
@@ -653,11 +648,11 @@ html {
     justify-content: center;
     width: 100%;
     position: relative;
-    top: 0px;
+    top: -500px;
 }
 
 .owners h2 {
-    font-family: 'Georgia', serif;
+    font-family: 'Kavoon';
     font-size: 24px;
     color: #b3542e;
 }
@@ -688,6 +683,8 @@ html {
     justify-content: center;
     flex-wrap: wrap;
     gap: 20px;
+    position: relative;
+    top: -500px;
 }
 .profile {
     background-color: #f5f5f5;
@@ -704,6 +701,7 @@ html {
 .profile .name {
     font-weight: bold;
     margin-top: 10px;
+    color: #344660;
 }
 .profile .id {
     color: #666;
@@ -793,3 +791,8 @@ html {
     transition: top 0.4s ease-in-out, opacity 0.4s ease, visibility 0s linear 0s;  /* Transition both top and opacity */
 }
 
+
+.cart-items img{
+    width: 30px;
+    height: 30px;
+}

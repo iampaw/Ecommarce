@@ -17,6 +17,7 @@ urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path('profile/<str:username>/', views.profile_view, name='profile'),
     path('address/', views.address_view, name='address'),
+    path('history/', views.history_view, name='history'),
     path('profile/topup/', views.top_up_balance, name='top_up_balance'),
     path('request-top-up/', views.request_top_up, name='request_top_up'),
     path('dashboard/top-up-requests/', views.admin_top_up_requests, name='admin_top_up_requests'),
@@ -26,12 +27,13 @@ urlpatterns = [
     path('order_success/', views.order_success, name='order_success'),
     path('add_to_cart/', views.add_to_cart, name='add_to_cart'),
     path('get_cart/', views.get_cart, name='get_cart'),
+    path('pblrks312/order/', views.order_admin_detail, name='admin_order_list'),
     path('order_status/<int:order_id>/', views.get_order_status, name='order_status'),
-    path('admin/order/<int:order_id>/', views.order_admin_detail, name='admin_order_detail'),
-    path('admin/order/<int:order_id>/approve/', views.approve_order, name='approve_order'),
-    path('admin/order/<int:order_id>/reject/', views.reject_order, name='reject_order'),
-    path('admin/order/<int:order_id>/pending/', views.set_pending, name='set_pending'),
-    path('admin/order/<int:order_id>/status/', views.update_order_status, name='update_order_status'),
+    path('pblrks312/order/<int:order_id>/', views.order_admin_detail, name='admin_order_detail'),
+    path('pblrks312/order/<int:order_id>/approve/', views.approve_order, name='approve_order'),
+    path('pblrks312/order/<int:order_id>/reject/', views.reject_order, name='reject_order'),
+    path('pblrks312/order/<int:order_id>/pending/', views.set_pending, name='set_pending'),
+    path('pblrks312/order/<int:order_id>/status/', views.update_order_status, name='update_order_status'),
     path('update_balance/', views.update_balance, name='update_balance'),
     path('kurangi-stok/', kurangi_stok, name='kurangi_stok'),
 
@@ -43,7 +45,7 @@ urlpatterns = [
     
 
     # Django admin URL setelah custom admin URLs
-    path('admin/', admin.site.urls),
+    path('pblrks312/', admin.site.urls),
     
     # URL patterns lainnya
     path('', views.home_page, name='home'),

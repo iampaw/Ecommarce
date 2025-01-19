@@ -5,9 +5,6 @@ body {
     margin: 0;
     padding: 20px;
     min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 .order-detail-container {
@@ -15,44 +12,86 @@ body {
     padding: 2rem;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    max-width: 800px;
-    width: 90%;
-    animation: slideIn 0.5s ease-out;
+    max-width: 1200px;
+    width: 95%;
+    margin: 0 auto;
 }
 
-/* Header Styles */
-h1 {
+/* Order Section Headers */
+.order-section {
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid #eee;
+}
+
+.order-section:last-child {
+    border-bottom: none;
+}
+
+.order-section h1 {
     font-family: 'Kavoon', cursive;
     color: #2c3e50;
     margin-bottom: 1.5rem;
-    text-align: center;
-    animation: fadeInDown 0.6s ease-out;
-}
-
-h2 {
-    color: #34495e;
-    border-bottom: 2px solid #eee;
     padding-bottom: 0.5rem;
-    margin: 1.5rem 0;
-    animation: fadeIn 0.8s ease-out;
+    border-bottom: 3px solid #3498db;
+    text-align: left;
 }
 
-/* Order Info Section */
+/* Individual Order Styles */
 .order-info {
     background: #f8f9fa;
     padding: 1.5rem;
     border-radius: 10px;
     margin-bottom: 2rem;
-    animation: fadeIn 0.8s ease-out;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+}
+
+.order-info:hover {
+    transform: translateY(-3px);
+}
+
+.order-info h2 {
+    color: #34495e;
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #eee;
+}
+
+.order-info h3 {
+    color: #2c3e50;
+    margin: 1rem 0;
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-block;
+    padding: 0.35em 0.65em;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+}
+
+.status-pending {
+    background: #ffeaa7;
+    color: #d35400;
+}
+
+.status-approved {
+    background: #55efc4;
+    color: #00b894;
+}
+
+.status-rejected {
+    background: #ff7675;
+    color: #d63031;
 }
 
 /* Table Styles */
-.order-items {
-    margin: 2rem 0;
-    animation: fadeIn 0.8s ease-out;
-}
-
-table {
+.order-items table {
     width: 100%;
     border-collapse: collapse;
     margin: 1rem 0;
@@ -62,68 +101,37 @@ table {
     overflow: hidden;
 }
 
-thead {
+.order-items thead {
     background: #34495e;
     color: white;
 }
 
-th, td {
+.order-items th,
+.order-items td {
     padding: 12px 15px;
     text-align: left;
     border-bottom: 1px solid #eee;
 }
 
-th {
-    font-weight: 600;
-}
-
-tbody tr:hover {
+.order-items tbody tr:hover {
     background: #f5f8fa;
 }
 
-/* Form Styles */
-form {
-    margin: 1.5rem 0;
-}
-
-select {
-    padding: 10px;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    font-size: 1rem;
-    margin: 0.5rem 0;
-    width: 200px;
-    transition: border-color 0.3s ease;
-}
-
-select:focus {
-    border-color: #3498db;
-    outline: none;
-}
-
-/* Button Styles */
+/* Action Buttons */
 .action-buttons {
     display: flex;
-    justify-content: center;
     gap: 1rem;
-    margin: 2rem 0;
-    animation: fadeInUp 0.8s ease-out;
+    margin-top: 1.5rem;
 }
 
 button {
-    padding: 12px 24px;
+    padding: 10px 20px;
     border: none;
     border-radius: 8px;
-    font-size: 1rem;
+    font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.3s ease;
-    margin: 0.5rem;
     font-weight: 500;
-}
-
-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 .btn-success {
@@ -141,13 +149,17 @@ button:hover {
     color: white;
 }
 
-/* Messages Styles */
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Message Alerts */
 .messages {
     position: fixed;
     top: 20px;
     right: 20px;
     z-index: 1000;
-    animation: slideIn 0.5s ease-out;
 }
 
 .alert {
@@ -156,6 +168,7 @@ button:hover {
     border-radius: 8px;
     color: white;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    animation: slideIn 0.5s ease-out;
 }
 
 .alert-success {
@@ -170,7 +183,7 @@ button:hover {
     background-color: #f1c40f;
 }
 
-/* Back Button Style */
+/* Back Button */
 .back-button {
     display: inline-block;
     padding: 10px 20px;
@@ -202,35 +215,12 @@ button:hover {
     }
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes fadeInDown {
-    from {
-        transform: translateY(-20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes fadeInUp {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
+/* Empty State Styles */
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #7f8c8d;
+    font-style: italic;
 }
 
 /* Responsive Design */
@@ -238,6 +228,7 @@ button:hover {
     .order-detail-container {
         padding: 1rem;
         margin: 1rem;
+        width: auto;
     }
 
     .action-buttons {
@@ -249,30 +240,39 @@ button:hover {
         margin: 0.5rem 0;
     }
 
-    select {
-        width: 100%;
-    }
-
-    table {
+    .order-items table {
         display: block;
         overflow-x: auto;
+    }
+
+    .order-info {
+        padding: 1rem;
     }
 
     th, td {
         min-width: 120px;
     }
-}
-
-@media (max-width: 480px) {
-    .order-info {
-        padding: 1rem;
-    }
-
-    h1 {
-        font-size: 1.5rem;
-    }
 
     .back-button {
         width: 100%;
+        margin: 1rem 0;
+    }
+}
+
+/* Print Styles */
+@media print {
+    body {
+        background: none;
+    }
+
+    .order-detail-container {
+        box-shadow: none;
+        padding: 0;
+    }
+
+    .action-buttons,
+    .back-button,
+    .messages {
+        display: none;
     }
 }

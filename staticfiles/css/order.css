@@ -1,0 +1,228 @@
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background-color: #faf7f2;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.success-container {
+    background: white;
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    width: 100%;
+    max-width: 600px; /* Increased from 400px to accommodate the new layout */
+    text-align: center;
+    animation: slideIn 0.6s ease-out;
+}
+
+/* Order details section - Updated */
+.order-details {
+    margin: 1.5rem 0;
+    text-align: left;
+    opacity: 0;
+    animation: fadeInUp 0.6s ease-out 1s forwards;
+}
+
+.order-item {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid #eee;
+    transition: transform 0.2s ease;
+}
+
+.order-item:hover {
+    transform: translateY(-2px);
+}
+
+.menu-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.menu-name {
+    font-family: 'Kavoon', sans-serif;
+    color: #2c3e50;
+    font-size: 1.2em;
+}
+
+.menu-description {
+    color: #666;
+    font-size: 0.9em;
+    line-height: 1.4;
+    margin: 8px 0;
+}
+
+.menu-info {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.quantity, .price, .total {
+    font-size: 0.95em;
+    color: #444;
+}
+
+.order-summary {
+    margin-top: 20px;
+    padding: 15px;
+    background: #2c3e50;
+    border-radius: 8px;
+    color: white;
+}
+
+.order-summary p {
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.order-summary .money {
+    color: #fff;
+}
+
+/* Keep your existing animations */
+@keyframes slideIn {
+    0% {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes checkmark {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Keep your existing success icon styles */
+.success-icon {
+    width: 64px;
+    height: 64px;
+    background-color: #4CAF50;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto 1.5rem;
+    animation: checkmark 0.8s cubic-bezier(0.65, 0, 0.45, 1) 0.2s backwards;
+}
+
+.success-icon::after {
+    content: '✓';
+    color: white;
+    font-size: 32px;
+}
+
+/* Your existing typography styles */
+h2 {
+    font-family: 'Kavoon', sans-serif;
+    color: #000;
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    opacity: 0;
+    animation: fadeInUp 0.6s ease-out 0.6s forwards;
+}
+
+p {
+    color: #666;
+    margin-bottom: 2rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    opacity: 0;
+    animation: fadeInUp 0.6s ease-out 0.8s forwards;
+}
+
+/* Back to Home button - Kept your styling */
+a {
+    display: inline-block;
+    text-decoration: none;
+    background-color: #2c3e50;
+    color: white;
+    padding: 0.8rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    opacity: 0;
+    animation: fadeInUp 0.6s ease-out 1.2s forwards;
+}
+
+a:hover {
+    background-color: #34495e;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(44, 62, 80, 0.15);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .success-container {
+        padding: 2rem 1.5rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    .menu-info {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* Keep your loading animation */
+.processing {
+    display: inline-block;
+}
+
+.processing::after {
+    content: '';
+    animation: processingDots 1.5s infinite;
+}
+
+@keyframes processingDots {
+    0% { content: '.'; }
+    33% { content: '..'; }
+    66% { content: '...'; }
+    100% { content: '.'; }
+}

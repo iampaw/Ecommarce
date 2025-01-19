@@ -1,0 +1,238 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #fdf6f0;
+}
+
+.container {
+    width: 100%;
+    max-width: 650px; /* Increased from 500px */
+    padding: 20px;
+}
+
+.title {
+    text-align: center;
+    font-size: 2.5rem; /* Increased from 2rem */
+    margin-bottom: 2.5rem; /* Increased from 2rem */
+    color: #333;
+}
+
+.form-card {
+    background: white;
+    padding: 3rem; /* Increased from 2rem */
+    border-radius: 15px; /* Increased from 12px */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.input-container {
+    background-color: #fdf6f0;
+    padding: 1.5rem; /* Increased from 1rem */
+    border-radius: 10px; /* Increased from 8px */
+    margin-bottom: 2rem; /* Increased from 1.5rem */
+    position: relative;
+}
+
+.input-label {
+    display: block;
+    text-align: center;
+    color: #333;
+    margin-bottom: 0.75rem;
+    font-size: 1.1rem;
+    margin-left: 0.5rem;
+}
+
+
+.amount-input {
+    width: 100%;
+    padding: 0.75rem; /* Increased from 0.5rem */
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-size: 1.3rem; /* Increased from 1.1rem */
+    outline: none;
+}
+
+.amount-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px; /* Increased from 10px */
+    margin-bottom: 2rem; /* Increased from 1.5rem */
+}
+
+.amount-button {
+    padding: 0.75rem; /* Increased from 0.5rem */
+    border: 1px solid #ddd;
+    border-radius: 8px; /* Increased from 6px */
+    background: white;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 1rem; /* Increased from 0.9rem */
+}
+
+.amount-button:hover {
+    background-color: #f0f0f0;
+}
+
+.amount-button.selected {
+    background-color: #e0e0e0;
+}
+
+.button-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem; /* Increased from 1rem */
+}
+
+.button {
+    padding: 1rem; /* Increased from 0.8rem */
+    border: none;
+    border-radius: 8px; /* Increased from 6px */
+    cursor: pointer;
+    font-weight: 500;
+    transition: opacity 0.3s;
+    font-size: 1.1rem; /* Added font size */
+}
+
+.cancel-button {
+    background-color: #2c3e50;
+    color: white;
+}
+
+.submit-button {
+    background-color: #2c3e50;
+    color: white;
+}
+
+.button:hover {
+    opacity: 0.9;
+}
+
+.cherry-icon {
+    position: absolute;
+    top: 15px; /* Increased from 10px */
+    right: 15px; /* Increased from 10px */
+    width: 50px; /* Increased from 40px */
+    height: 50px; /* Increased from 40px */
+}
+
+.cherry-svg {
+    fill: #ff4444;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 480px) {
+    .amount-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .form-card {
+        padding: 1.5rem;
+    }
+
+    .container {
+        padding: 10px;
+    }
+    
+    .title {
+        font-size: 2rem;
+    }
+}
+
+/* Initial animations */
+.title {
+    animation: fadeInDown 1s ease-out;
+}
+
+.form-card {
+    animation: fadeIn 1s ease-out;
+}
+
+.amount-button {
+    animation: fadeIn 0.5s ease-out backwards;
+}
+
+.amount-button:nth-child(1) { animation-delay: 0.1s; }
+.amount-button:nth-child(2) { animation-delay: 0.2s; }
+.amount-button:nth-child(3) { animation-delay: 0.3s; }
+.amount-button:nth-child(4) { animation-delay: 0.4s; }
+.amount-button:nth-child(5) { animation-delay: 0.5s; }
+.amount-button:nth-child(6) { animation-delay: 0.6s; }
+.amount-button:nth-child(7) { animation-delay: 0.7s; }
+.amount-button:nth-child(8) { animation-delay: 0.8s; }
+
+.button-container {
+    animation: fadeInUp 1s ease-out;
+}
+
+/* Hover animations */
+.input-container {
+    transition: transform 0.3s ease;
+}
+
+.input-container:hover {
+    transform: translateY(-5px);
+}
+
+.amount-button {
+    transition: all 0.3s ease;
+}
+
+.amount-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.amount-button.selected {
+    transform: scale(0.98);
+}
+
+.button {
+    transition: all 0.3s ease;
+}
+
+.button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.button:active {
+    transform: translateY(-1px);
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
